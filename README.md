@@ -1,4 +1,4 @@
-# vscode-led-basic
+# VS Code LED Basic language support
 
 This extension adds LED Basic support for Visual Studio Code.
 
