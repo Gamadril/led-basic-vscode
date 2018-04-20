@@ -1,0 +1,106 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "LED Basic",
+	"patterns": [{
+			"include": "#comments"
+		},
+		{
+			"comment": "Libraries",
+			"patterns": [{
+				"name": "keyword.control.led_basic",
+				"match": "\\b(?i)(IO|LED|KEY|PORT|RTC|LDR|TEMP|XTEMP|IR|BEEP|ENC|POTI|EEP|SYS)\\b"
+			}]
+		},
+		{
+			"include": "#labels"
+		},
+		{
+			"comment": "Strings",
+			"name": "string.quoted.double.led_basic",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [{
+				"name": "constant.character.escape.led_basic",
+				"match": "\\\\."
+			}]
+		},
+		{
+			"comment": "Numbers",
+			"patterns": [{
+				"match": "\\b((0x[0-9a-fA-F]+)|(0[0-7]+i?)|(\\d+i?))\\b",
+				"name": "constant.numeric.led_basic"
+			}]
+		},
+		{
+			"comment": "Variables",
+			"patterns": [{
+				"match": "\\b([a-zA-Z])\\b",
+				"captures": {
+					"1": {
+						"name": "variable.other.led_basic"
+					}
+				}
+			}]
+		},
+		{
+			"comment": "Configuration Line",
+			"match": "^###\\s.*$",
+			"name": "keyword.other.special-method.led_basic"
+		},
+		{
+			"comment": "Built-in functions",
+			"match": "\\b(print)\\b",
+			"name": "support.function.builtin.led_basic"
+		},
+		{
+			"comment": "Keywords",
+			"patterns": [{
+				"comment": "Flow control keywords",
+				"match": "\\b(if|then|else|goto|gosub|return|to|for|next|end|let|data|delay|random|read)\\b",
+				"name": "keyword.control.led_basic"
+			}]
+		}
+	],
+	"repository": {
+		"labels": {
+			"patterns": [{
+				"match": "^\\s*([0-9]+)(:)(.*)$",
+				"captures": {
+					"1": {
+						"name": "keyword.other.special-method.led_basic"
+					},
+					"2": {
+						"name": "punctuation.separator.led_basic"
+					},
+					"3": {
+						"patterns": [{
+							"include": "$self"
+						}]
+					}
+				}
+			}]
+		},
+		"comments": {
+			"patterns": [{
+				"begin": "'",
+				"beginCaptures": {
+					"0": {
+						"name": "punctuation.definition.comment.led_basic"
+					}
+				},
+				"end": "$",
+				"name": "comment.line.quote.led_basic"
+			}, {
+				"begin": "rem|REM",
+				"beginCaptures": {
+					"0": {
+						"name": "punctuation.definition.comment.led_basic"
+					}
+				},
+				"end": "$",
+				"name": "comment.line.rem.led_basic"
+			}]
+		}
+	},
+	"scopeName": "source.led_basic"
+}

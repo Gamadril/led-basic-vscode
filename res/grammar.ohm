@@ -1,0 +1,118 @@
+LEDBASIC {
+    Program = emptyLine* configLine? (emptyLine | Line)*
+
+    configLine = "###" (~eol any)+ eol
+
+    emptyLine = comment? eol
+    Line = ( DataLine | Label | Statement ) comment? (eol | end)
+
+    Statement = Jump
+              | Comparison
+              | Assignment
+              | Loop
+              | Next
+              | Delay
+              | Print
+              | return
+              | LibCall
+              | endLit
+
+    Label = digit+ ":"
+
+    variable = letter
+
+    random = caseInsensitive<"random">
+
+    variableDecl = letter
+
+    Assignment = (caseInsensitive<"let">)? variableDecl "=" Expression
+
+    Expression =  LogicOrExpression
+    
+    LogicOrExpression = LogicOrExpression "or" LogicAndExpression -- logor
+                      | LogicAndExpression
+
+    LogicAndExpression = LogicAndExpression "and" BitwiseORExpression -- logand
+                       | BitwiseORExpression
+
+    BitwiseORExpression = BitwiseORExpression "|" BitwiseANDExpression -- bor
+                      | BitwiseANDExpression
+
+    BitwiseANDExpression = BitwiseANDExpression "&" CompareExpression -- band
+                       | CompareExpression
+
+    CompareExpression = CompareExpression compOperation AddExpression -- comp
+                      | AddExpression
+
+    AddExpression = AddExpression addOperation MulExpression -- add
+                  | MulExpression
+
+    MulExpression = MulExpression mulOperation PrefixExpression -- mul
+                  | PrefixExpression
+
+    PrefixExpression = prefixOperation ParenExpression -- prefix
+                     | ParenExpression
+    
+    ParenExpression = "(" Expression ")" -- paren
+                    | RestExpression
+
+    RestExpression = LibCall
+        | DataRead
+        | random
+        | variable
+        | value
+
+    return = caseInsensitive<"return">
+    endLit = caseInsensitive<"end">
+
+// Operation
+    addOperation =  "+" | "-"
+    compOperation  =  "<=" |  "<>" | ">=" | "<" | "=" | ">"
+    mulOperation = "*" | "/" | "%"
+    prefixOperation = "-"
+
+// Loop
+    Loop = caseInsensitive<"for"> variable "=" Expression (caseInsensitive<"to"> | caseInsensitive<"downto">) Expression (caseInsensitive<"step"> Expression)?
+    Next = caseInsensitive<"next"> variable
+
+// Comparison
+    Comparison = caseInsensitive<"if"> Expression (caseInsensitive<"then">)? Statement (caseInsensitive<"else"> Statement)?
+    //Comparison = caseInsensitive<"if"> Expression caseInsensitive<"then"> Statement caseInsensitive<"else"> Statement
+
+// Jump
+    Jump = (caseInsensitive<"goto"> | caseInsensitive<"gosub">) decimalValue
+
+// Delay
+    Delay = caseInsensitive<"delay"> Expression
+
+// Print
+    Print = caseInsensitive<"print"> PrintArgs
+    PrintArgs = PrintArg (PrintArgsList)*
+    PrintArgsList = PrintArgSeparator PrintArg
+    PrintArgSeparator = "," | ";"
+    PrintArg = Expression | string
+
+// LibCall
+    LibCall = (caseInsensitive<"LED"> | caseInsensitive<"IO">) "." alnum+ "(" CallArgs ")"
+    CallArgs = ListOf<Expression, ",">
+
+// Date read
+    DataLine = (Label)? caseInsensitive<"data"> DataElems
+    DataRead = caseInsensitive<"read"> decimalValue "," Expression
+    DataElems = NonemptyListOf<(hexValue | binaryValue | decimalValue), ",">
+
+// Value
+    binaryDigit = "0".."1"
+    string = "\"" ("\\\"" | (~"\"" any))* "\""
+
+    value = hexValue | binaryValue | decimalValue
+    decimalValue = digit+ 
+    hexValue = ("0x" | "0X") hexDigit+
+    binaryValue = "0b" binaryDigit+
+
+// Comment, Space
+    space := " " | "\t"
+
+    comment = ("\'" | caseInsensitive<"rem">) (~eol any)*
+    eol = "\n" | "\r\n"
+}
