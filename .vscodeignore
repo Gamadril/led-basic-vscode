@@ -5,3 +5,6 @@ build/**
 build/
 tests/**
 tests/
+gh/**
+gh/
+package-lock.json
