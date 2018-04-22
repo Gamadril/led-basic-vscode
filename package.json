@@ -2,15 +2,16 @@
     "name": "led-basic",
     "displayName": "LED Basic",
     "description": "LED Basic language support for Visual Studio Code",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "publisher": "Gamadril",
-    "license": "SEE LICENSE IN LICENSE.md",
+    "license": "MIT",
     "engines": {
         "vscode": "^1.22.0"
     },
     "categories": [
         "Programming Languages"
     ],
+    "qna": false,
     "contributes": {
         "languages": [
             {

@@ -15,3 +15,10 @@ This extension adds LED Basic support for Visual Studio Code.
 - Jump to label
 - Shows all references to a label
 
+## Issues
+Please report problems and feature requests on [github](https://github.com/Gamadril/led-basic-vscode/issues)
+
+## Licence
+MIT license, see [LICENSE](./LICENSE)
+
+

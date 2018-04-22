@@ -82,8 +82,18 @@ const color = {
 
 const pos = {
     name: "pos",
-    description: "Position of the display segment. [0..3]"
+    description: "Position on the display. [0..3]"
 };
+
+const num = {
+    name: "value",
+    description: "Value to display. [0..65536]"
+}
+
+const width = {
+    name: "width",
+    description: "Number of places to use + 1. [0..3]"
+}
 
 function pchar(name?: string): IParam {
     let result: IParam = {
@@ -247,7 +257,7 @@ export const API: ILibEntries = {
         },
         pchar: {
             signature: "LED.pchar(pos, char)",
-            description: "Shows one character in a display segment.",
+            description: "Shows one character at specified position.",
             parameters: [pos, char]
         },
         achar: {
@@ -257,7 +267,7 @@ export const API: ILibEntries = {
         },
         praw: {
             signature: "LED.praw(pos, raw)",
-            description: "Shows a raw bit coded character in a display segment.",
+            description: "Shows a raw bit coded character at specified position.",
             parameters: [pos, raw]
         },
         araw: {
@@ -267,10 +277,23 @@ export const API: ILibEntries = {
         },
         adp: {
             signature: "LED.adp(dp)",
-            description: "Shows decimal points in a display segment",
+            description: "Shows decimal points at specified position.",
             parameters: [{
                 name: "dp",
                 description: "Decimal point bit coded. Bit X=segment X. [0..15]"
+            }]
+        },
+        phex: {
+            signature: "LED.phex(pos, value, width)",
+            description: "Shows the value as HEX number at specified position.",
+            parameters: [pos, num, width]
+        },
+        pdez: {
+            signature: "LED.pdez(pos, value, width, lzero)",
+            description: "Shows the value as dezimal number at specified position.",
+            parameters: [pos, num, width, {
+                name: "lzero",
+                description: "Show leading zeros. 0 = no, 1 = yes"
             }]
         }
     },

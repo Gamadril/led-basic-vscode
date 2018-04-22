@@ -1,5 +1,11 @@
 # LED Basic extension changelog
 
+## 1.0.1 - 22.04.2018
+- Added device selection in the status bar
+- Improved code completion suggesting only functions supported by selected device
+- Improved code validation. Function calls not supported by currently selected device will be reported in the problems view
+- Bugfix: added missing `phex` and `pdez` commands
+
 ## 1.0.0 - 20.04.2018
 - Initial release
 - LED Basic V15.1.14 support
