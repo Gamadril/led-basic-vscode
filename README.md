@@ -11,7 +11,7 @@ This extension adds LED Basic support for Visual Studio Code.
 - Smart Bracket support
 - Hover symbol information
 - Code completion support
-- Intial diagnostics support based on code validation using language grammar parser
+- Initial diagnostics support based on code validation using language grammar parser
 - Jump to label
 - Shows all references to a label
 
