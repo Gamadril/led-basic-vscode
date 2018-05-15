@@ -1,0 +1,29 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "LED Basic OUTPUT",
+    "scopeName": "output.led_basic",
+    "patterns": [{
+        "name": "output.info",
+        "match": "(\\[INFO\\])(.+)",
+        "captures": {
+            "1": {
+                "name": "token.info-token"
+            },
+            "2": {
+                "name": "string"
+            }
+        }
+    },
+    {
+        "name": "output.error",
+        "match": "(\\[ERROR\\])(.+)",
+        "captures": {
+            "1": {
+                "name": "token.error-token"
+            },
+            "2": {
+                "name": "string"
+            }
+        }
+    }]
+}

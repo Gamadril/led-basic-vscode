@@ -1,0 +1,17 @@
+{
+  "name": "blp-serial",
+  "version": "0.0.1",
+  "description": "blp-serial based on node-serialport",
+  "main": "lib/index.js",
+  "gypfile": true,
+  "keywords": [],
+  "license": "MIT",
+  "scripts": {
+    "install": "node-gyp rebuild --target=1.7.12 --arch=x64 --dist-url=https://atom.io/download/electron"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "nan": "^2.10.0",
+    "node-gyp": "^3.6.2"
+  }
+}

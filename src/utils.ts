@@ -1,5 +1,6 @@
-import * as vscode from 'vscode';
+'use strict';
 import { IEntry, API } from "./LEDBasicAPI";
+import { extensions } from "vscode";
 
 /**
  * Finds the function signature information
@@ -28,9 +29,26 @@ export function findLibSignature(funcName: string): IEntry | null {
  * Returns the root path of the current extension
  */
 export function getExtensionPath(): string {
-    let ext = vscode.extensions.getExtension('Gamadril.led-basic');
+    let ext = extensions.getExtension('Gamadril.led-basic');
     if (ext) {
-        return ext.extensionPath + '/';    
+        return ext.extensionPath + '/';
     }
     return '';
+}
+
+/**
+ * Converts the provided array to a HEX string representation
+ * @param array 
+ */
+export function dump(array: Uint8Array) {
+    var str = '';
+    for (var index = 0; index < array.length; index++) {
+        str += ('0' + (Number(array[index]).toString(16))).slice(-2).toUpperCase();
+        if (index % 16 === 15) {
+            str += '\n';
+        } else {
+            str += ' ';
+        }
+    }
+    return str;
 }

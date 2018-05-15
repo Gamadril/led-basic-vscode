@@ -16,5 +16,16 @@
 			"next ${1:index}"
 		],
 		"description": "For Next Loop"
+	},
+	"If Then": {
+		"prefix": "if",
+		"body": "if ${1:condition} then $0",
+		"description": "If Then statement"
+	},
+	"If Then Else": {
+		"prefix": "ifelse",
+		"body": "if ${1:condition} then $2 else $0",
+		"description": "If Then Else statement"
 	}
+
 }

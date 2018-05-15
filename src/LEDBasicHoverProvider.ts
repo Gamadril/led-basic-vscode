@@ -4,7 +4,7 @@ import { HoverProvider, TextDocument, CancellationToken, Hover, ProviderResult, 
 import { findLibSignature } from './utils';
 
 export class LEDBasicHoverProvider implements HoverProvider {
-    public provideHover(document: TextDocument, position: Position, token: CancellationToken): ProviderResult<Hover> {
+    provideHover(document: TextDocument, position: Position, token: CancellationToken): ProviderResult<Hover> {
         let wordRange = document.getWordRangeAtPosition(position)
             || document.getWordRangeAtPosition(position, new RegExp('###')); // check for configuration line
         if (!wordRange) {

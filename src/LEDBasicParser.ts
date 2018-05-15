@@ -4,9 +4,29 @@ import ohm = require('ohm-js')
 import fs = require('fs');
 import { getExtensionPath } from "./utils";
 import { Range, Position } from 'vscode';
+import { COLOR_ORDER } from './Device';
 
 interface IJumpTable { [label: string]: number; }
 interface IOperationList { [op: string]: number; }
+
+interface IParseResult {
+    success: boolean,
+    code: Uint8Array,
+    config: IConfig
+}
+
+export interface IConfig {
+    gprint?: boolean;
+    white?: boolean;
+    sys_led?: number;
+    ledcnt?: number;
+    color_order?: COLOR_ORDER;
+    cfg?: number;
+    mbr?: number;
+    led_type?: number;
+    spi_rate?: number;
+    frame_rate?: number;
+}
 
 export interface IError {
     message: string;
@@ -16,24 +36,91 @@ export interface IMatchResult {
     success: boolean;
     errors?: IError[]
 }
+interface ILibMap {
+    [name: string]: {
+        token: number,
+        functions: {
+            [name: string]: number
+        }
+    }
+}
 
-export class LEDBasicParser {
+const lib_map: ILibMap = {
+    'led': {
+        token: 0xAC,
+        functions: {
+            'setall': 0x81,
+            'setled': 0x7A,
+            'lrgb': 0x44,
+            'lhsv': 0x3C,
+            'show': 0x08,
+            'irgb': 0x14,
+            'ihsv': 0x1C,
+            'iled': 0x2A,
+            'iall': 0x21,
+            'irange': 0x33,
+            'rainbow': 0x5E,
+            'copy': 0x4A,
+            'repeat': 0x53,
+            'shift': 0x63,
+            'mirror': 0x6B,
+            'blackout': 0x70,
+            'clear': 0x88,
+            'pdez': 0xC4,
+            'adp': 0xB1,
+            'achar': 0x9C,
+            'pchar': 0x92,
+            'praw': 0xA2,
+            'araw': 0xAC,
+            'phex': 0xBB,
+            'bright': 0xC9
+        }
+    },
+    'io': {
+        token: 0xAD,
+        functions: {
+            'waitkey': 0x08,
+            'getkey': 0x10,
+            'keystate': 0x68,
+            'setport': 0x39,
+            'clrport': 0x41,
+            'getrtc': 0x19,
+            'setrtc': 0x22,
+            'getldr': 0x28,
+            'getir': 0x30,
+            'gettemp': 0x48,
+            'xtempcnt': 0x70,
+            'xtempval': 0x7A,
+            'beep': 0x51,
+            'getenc': 0x60,
+            'setenc': 0x5B,
+            'getpoti': 0x81,
+            'eeread': 0x89,
+            'eewrite': 0x92,
+            'sys': 0xA2
+        }
+    }
+};
+
+class LEDBasicParser {
     private _grammar: ohm.Grammar;
     private _semantics: ohm.Semantics;
 
     private JumpTable: IJumpTable = {};
     private lineNumber = 0;
 
-    constructor(grammar?: string) {
-        if (!grammar) {
-            grammar = fs.readFileSync(getExtensionPath() + 'res/grammar.ohm').toString();
-        }
+    constructor() {
+        let grammar = fs.readFileSync(getExtensionPath() + 'res/grammar.ohm').toString();
 
         this._grammar = ohm.grammar(grammar);
         this._semantics = this.createSemantics();
     }
 
-    public match(text: string): IMatchResult {
+    /**
+     * Checks if the provided code respects the grammar. Returns generated errors for the "PROBLEMS" view 
+     * @param text - source code
+     */
+    match(text: string): IMatchResult {
         let result: IMatchResult = {
             success: true
         }
@@ -59,25 +146,23 @@ export class LEDBasicParser {
         return result;
     }
 
-    public build(text: string): IMatchResult {
-        let result: IMatchResult = {
-            success: true
+    /**
+     * Generates tokenized code for the upload. Provides local configuration properties if detected in the code.
+     * @param text - source code
+     */
+    build(text: string): IParseResult | null {
+        var check = this.match(text);
+        if (!check.success) {
+            return null;
         }
 
-        let match = this._grammar.match(text);
-        if (match.failed()) {
-            return this.match(text);
-        }
-
-        var code = this._semantics(match).eval();
-
-        if (code.success === false) {
-            return code;
-        }
-
+        let result: IParseResult = this._semantics(this._grammar.match(text)).eval();
         return result;
     }
 
+    /**
+     * Build local semantics for generating tokenized output for the target device
+     */
     private createSemantics() {
         let result = this._grammar.createSemantics();
         let errors: IError[] = [];
@@ -247,16 +332,7 @@ export class LEDBasicParser {
             },
             configLine: function (a, b, lnbr) {
                 var elem, i, cparams = b.sourceString.trim().split(' '),
-                    result = {
-                        ledcount: 256,
-                        clrorder: 0,
-                        white: false,
-                        mbr: 100,
-                        gprint: true,
-                        sysled: 3,
-                        ledtype: 0,
-                        bitrate: 3,
-                        framerate: 25
+                    result: IConfig = {
                     },
                     cfg_id, cfg_param;
 
@@ -266,19 +342,19 @@ export class LEDBasicParser {
                     cfg_param = elem.substring(1);
 
                     if (cfg_id === 'L') {
-                        result.ledcount = parseInt(cfg_param, 10);
+                        result.ledcnt = parseInt(cfg_param, 10);
                     } else if (cfg_id === 'C') {
                         if (cfg_param === 'RGB') {
-                            result.clrorder = 0xE4;
+                            result.color_order = COLOR_ORDER.RGB;
                             result.white = false;
                         } else if (cfg_param === 'GRB') {
-                            result.clrorder = 0xB4;
+                            result.color_order = COLOR_ORDER.GRB;
                             result.white = false;
                         } else if (cfg_param === 'GRBW') {
-                            result.clrorder = 0xB4;
+                            result.color_order = COLOR_ORDER.GRB;
                             result.white = true;
                         } else if (cfg_param === 'RGBW') {
-                            result.clrorder = 0xE4;
+                            result.color_order = COLOR_ORDER.RGB;
                             result.white = true;
                         }
                     } else if (cfg_id === 'M') {
@@ -286,13 +362,13 @@ export class LEDBasicParser {
                     } else if (cfg_id === 'P') {
                         result.gprint = cfg_param === '0' ? false : true;
                     } else if (cfg_id === 'S') {
-                        result.sysled = parseInt(cfg_param, 10);
+                        result.sys_led = parseInt(cfg_param, 10);
                     } else if (elem.startsWith('T')) {
-                        result.ledtype = parseInt(cfg_param, 10);
+                        result.led_type = parseInt(cfg_param, 10);
                     } else if (elem.startsWith('A')) {
-                        result.bitrate = parseInt(cfg_param, 10);
+                        result.spi_rate = parseInt(cfg_param, 10);
                     } else if (elem.startsWith('F')) {
-                        result.framerate = parseInt(cfg_param, 10);
+                        result.frame_rate = parseInt(cfg_param, 10);
                     }
                 }
                 return result;
@@ -388,9 +464,6 @@ export class LEDBasicParser {
             Expression: function (e) {
                 return e.eval();
             },
-            // LogicOrExpression: function (e) {
-            //   return e.eval();
-            // },
             LogicOrExpression_logor: function (a, orLit, b) {
                 var left = a.eval();
                 var right = b.eval();
@@ -403,9 +476,6 @@ export class LEDBasicParser {
                     value: result
                 };
             },
-            // LogicAndExpression: function (e) {
-            //   return e.eval();
-            // },
             LogicAndExpression_logand: function (a, andLit, b) {
                 var left = a.eval();
                 var right = b.eval();
@@ -418,9 +488,6 @@ export class LEDBasicParser {
                     value: result
                 };
             },
-            // BitwiseORExpression: function (e) {
-            //   return e.eval();
-            // },
             BitwiseORExpression_bor: function (a, op, b) {
                 var left = a.eval();
                 var right = b.eval();
@@ -433,9 +500,6 @@ export class LEDBasicParser {
                     value: result
                 };
             },
-            // BitwiseANDExpression: function (e) {
-            //   return e.eval();
-            // },
             BitwiseANDExpression_band: function (a, op, b) {
                 var left = a.eval();
                 var right = b.eval();
@@ -448,9 +512,6 @@ export class LEDBasicParser {
                     value: result
                 };
             },
-            // CompareExpression: function (e) {
-            //   return e.eval();
-            // },
             CompareExpression_comp: function (a, op, b) {
                 const ops: IOperationList = {
                     '<': 0xA4,
@@ -472,9 +533,6 @@ export class LEDBasicParser {
                     value: result
                 };
             },
-            // AddExpression: function (e) {
-            //   return e.eval();
-            // },
             AddExpression_add: function (a, op, b) {
                 const ops: IOperationList = {
                     '+': 0x9D,
@@ -492,9 +550,6 @@ export class LEDBasicParser {
                     value: result
                 };
             },
-            // MulExpression: function (e) {
-            //   return e.eval();
-            // },
             MulExpression_mul: function (a, op, b) {
                 const ops: IOperationList = {
                     '*': 0xA1,
@@ -513,9 +568,6 @@ export class LEDBasicParser {
                     value: result
                 };
             },
-            // PrefixExpression: function (e) {
-            //   return e.eval();
-            // },
             PrefixExpression_prefix: function (op, b) {
                 const ops: IOperationList = {
                     '-': 0x9E
@@ -529,9 +581,6 @@ export class LEDBasicParser {
                     value: result
                 };
             },
-            // ParenExpression: function (e) {
-            //   return e.eval();
-            // },
             ParenExpression_paren: function (leftparen, e, rightparen) {
                 var inner = e.eval();
                 var result = new Uint8Array(inner.value.length + 2);
@@ -546,18 +595,6 @@ export class LEDBasicParser {
             RestExpression: function (e) {
                 return e.eval();
             },
-            // addOperation: function (e) {
-            //   return this.sourceString;
-            // },
-            // compOperation: function (e) {
-            //   return this.sourceString;
-            // },
-            // mulOperation: function (e) {
-            //   return this.sourceString;
-            // },
-            // prefixOperation: function (e) {
-            //   return this.sourceString;
-            // },
             Loop: function (forLit, variable, eqSign, init, dirLit, end, stepLit, step) {
                 var varExp = variable.eval();
                 var initExp = init.eval();
@@ -674,16 +711,18 @@ export class LEDBasicParser {
             },
             PrintArgs: function (first, rest) {
                 var f = first.eval();
-                var r;
-                
+                var args, r: any = {
+                    value: []
+                };
+
                 if (rest.sourceString !== '') {
-                    r = rest.eval()[0];
-                } else {
-                    r = {
-                        value: []
-                    };
+                    args = rest.eval();
+                    args.forEach((arg: any) => {
+                        for (let i = 0; i < arg.value.length; i++) {
+                            r.value.push(arg.value[i]);
+                        }
+                    });
                 }
-                
 
                 var result = new Uint8Array(f.value.length + r.value.length);
                 result.set(f.value, 0);
@@ -740,9 +779,8 @@ export class LEDBasicParser {
             LibCall: function (libName, dot, funcName, leftBr, params, rightBr) {
                 var paramsEv = params.eval();
                 var result = new Uint8Array(paramsEv.value.length + 2);
-                // TODO
-                //result[0] = lib_map[libName.sourceString.toLowerCase()].token;
-                //result[1] = lib_map[libName.sourceString.toLowerCase()].func[funcName.sourceString.toLowerCase()];
+                result[0] = lib_map[libName.sourceString.toLowerCase()].token;
+                result[1] = lib_map[libName.sourceString.toLowerCase()].functions[funcName.sourceString.toLowerCase()];
                 result.set(paramsEv.value, 2);
 
                 return {
@@ -751,7 +789,6 @@ export class LEDBasicParser {
                 };
             },
             CallArgs(args) {
-                console.log(this.sourceString);
                 var i, index = 0;
 
                 if (args.sourceString !== '') {
@@ -770,14 +807,14 @@ export class LEDBasicParser {
                 }) => {
                     len += value.value.length;
                 });
-                if (e.value.length) {
+                if (e.value.length) { // reserve space for commas between arguments
                     len += e.value.length - 1;
                 }
-                
+
                 var result = new Uint8Array(len);
                 for (i = 0; i < e.value.length; i++) {
-                    result.set(e.value[i], index);
-                    index += e.value[i].length;
+                    result.set(e.value[i].value, index);
+                    index += e.value[i].value.length;
                     if (i < e.value.length - 1) {
                         result[index] = 0x99;
                         index++;
@@ -806,8 +843,9 @@ export class LEDBasicParser {
 
                 var len = e.value.length * 2;
                 var result = new Uint8Array(len);
+                let dv = new DataView(result.buffer);
                 for (i = 0; i < e.value.length; i++) {
-                    result.set([e.value[i]], i * 2);
+                    dv.setInt16(i * 2, e.value[i], true);
                 }
 
                 return {
@@ -831,25 +869,6 @@ export class LEDBasicParser {
                     length: inev.value.length
                 };
             },
-            // Data: function (lines) {
-            //   var data = lines.eval();
-            //   var len = 1;
-            //   for (var i = 0; i < data.length; i++) {
-            //     len += data[i].value.length;
-            //   }
-            //   var result = new Uint8Array(len);
-            //   result[0] = 0xAE;
-            //   len = 1;
-            //   for (var i = 0; i < data.length; i++) {
-            //     result.set(data[i].value, len);
-            //     len += data[i].value.length;
-            //   }
-
-            //   return {
-            //     type: 'data',
-            //     value: result
-            //   }
-            // },
             DataLine: function (optLabel, dataLit, args) {
                 var label;
                 if (optLabel.sourceString.length) {
@@ -866,12 +885,6 @@ export class LEDBasicParser {
                     value: result
                 };
             },
-            // binaryDigit: function (e) {
-            //   return this.sourceString;
-            // },
-            // string: function (a, b, c) {
-            //   return this.sourceString;
-            // },
             value: function (e) {
                 var value = e.eval();
                 var result = new Uint8Array(3);
@@ -914,9 +927,6 @@ export class LEDBasicParser {
                     value: new Uint8Array([0x83])
                 };
             },
-            // comment: function (e) {
-            //   return this.sourceString;
-            // },
             eol: function (_) {
                 return this.sourceString;
             }
@@ -925,3 +935,5 @@ export class LEDBasicParser {
         return result;
     }
 }
+
+export const ledBasicParser = new LEDBasicParser();

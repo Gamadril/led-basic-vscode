@@ -1,5 +1,14 @@
 # LED Basic extension changelog
 
+## 1.1.0 - 15.05.2018
+- Added `if` and `ifelse` snippets for correpsonding `If Then` and `If Then Else` statements
+- Added code uploader. Statusbar contains buttons for selecting a serial port and "Upload" for writing code to connected device
+- Shortcut for code upload is `ctrl+alt+u` for windows/linux and `cmd+alt+u` for mac
+- Improved definition and reference detection
+- Improved code validator checking now function calls for the number of arguments
+- Added code formatter
+- Fixed several other bugs
+
 ## 1.0.1 - 22.04.2018
 - Added device selection in the status bar
 - Improved code completion suggesting only functions supported by selected device

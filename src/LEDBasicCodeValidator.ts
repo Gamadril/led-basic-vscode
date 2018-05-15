@@ -1,37 +1,30 @@
 'use strict';
 
-import { DiagnosticCollection, Diagnostic, DiagnosticSeverity, Range, TextDocument } from "vscode";
-import { LEDBasicParser, IError } from "./LEDBasicParser";
+import { DiagnosticCollection, Diagnostic, DiagnosticSeverity, Range, TextDocument, Position } from "vscode";
+import { deviceSelector } from "./DeviceSelector";
+import { ledBasicParser, IError } from "./LEDBasicParser";
 
 export class LEDBasicCodeValidator {
-    private _parser: LEDBasicParser | null = null;
     private _runner: NodeJS.Timer | null = null;
-    private _diagnosticCollection: DiagnosticCollection | null;
-    private _deviceCommands: string[] = [];
+    private _diagnosticCollection: DiagnosticCollection;
 
     constructor(diagnosticCollection: DiagnosticCollection) {
         this._diagnosticCollection = diagnosticCollection;
-        this._parser = new LEDBasicParser();
     }
 
     dispose() {
-        this._diagnosticCollection = null;
-        this._parser = null;
+        this._diagnosticCollection.dispose();
         if (this._runner !== null) {
             clearTimeout(this._runner);
             this._runner = null;
         }
     }
 
-    public setSupportedCommands(commands: string[]) {
-        this._deviceCommands = commands;
-    }
-
-    public validate(doc: TextDocument) {
-        return this.parseFile(doc);
-    }
-
-    private parseFile(doc: TextDocument) {
+    /**
+     * Validates the provided document. The validation itself is executed after a delay if no other calls were registered in thea period of time
+     * @param doc - Textdocument object of the current file
+     */
+    validate(doc: TextDocument) {
         if (doc.isUntitled) {
             return;
         }
@@ -42,32 +35,46 @@ export class LEDBasicCodeValidator {
             clearTimeout(this._runner);
         }
         this._runner = setTimeout(() => {
-            this.processFile(doc);
+            let result = this.processFile(doc);
+            if (!result) {
+                // commands.executeCommand("workbench.action.problems.focus");
+            }
             this._runner = null;
-        }, 400);
+        }, 1000);
     }
 
-    private processFile(doc: TextDocument) {
-        if (!this._parser || !this._diagnosticCollection) {
-            return;
-        }
+    /**
+     * Validates the provided document immeditaely and returns the resul of the validation.
+     * @param doc - Textdocument object of the current file
+     */
+
+    validateNow(doc: TextDocument) {
+        return this.processFile(doc);
+    }
+
+    /**
+     * Validates the code file and generates error messages for the "PROBLEMS" view
+     * @param doc - Textdocument object of the current file
+     */
+    private processFile(doc: TextDocument): boolean {
         this._diagnosticCollection.clear();
 
         let sourceCode = doc.getText();
-        let matchResult = this._parser.match(sourceCode);
+        let matchResult = ledBasicParser.match(sourceCode);
 
         if (!matchResult.success && matchResult.errors) {
             let diagnostics = matchResult.errors.map((error: IError) => {
                 return new Diagnostic(error.range, error.message, DiagnosticSeverity.Error)
             });
             this._diagnosticCollection.set(doc.uri, diagnostics);
+            return false;
         } else {
             try {
-                matchResult = this._parser.build(sourceCode);
+                matchResult = ledBasicParser.match(sourceCode);
             } catch (e) {
                 console.log(e);
             }
-            
+
             let diagnostics: Diagnostic[] = [];
 
             if (!matchResult.success && matchResult.errors) {
@@ -77,21 +84,65 @@ export class LEDBasicCodeValidator {
             }
 
             // check for illegal API usage
-            let reg = new RegExp('(?:IO|LED)\\.([a-zA-Z]*)', 'gi');
+            let currentDevice = deviceSelector.selectedDevice();
+            let line;
             let m;
-            while (m = reg.exec(sourceCode)) {
-                let funcName = m[1];
-                if (this._deviceCommands.indexOf(funcName) === -1) {
-                    let start = doc.positionAt(m.index);
-                    let end = doc.positionAt(m.index + m[0].length);
-                    let diagnostic = new Diagnostic(new Range(start, end), 'Command ' + m[0] + ' is not supported by current device', DiagnosticSeverity.Error);
-                    diagnostics.push(diagnostic);
+            let reg = new RegExp('((?:IO|LED)\\.([a-zA-Z]+))', 'gim');
+            for (let index = 0; index < doc.lineCount; index++) {
+                line = doc.lineAt(index);
+                // skip line if empty or is a comment
+                if (line.isEmptyOrWhitespace || line.text.trim().startsWith('\'')) {
+                    continue;
+                }
+
+                while (m = reg.exec(line.text)) {
+                    let funcName = m[2];
+                    //let args = m[3];
+                    let cmd = currentDevice.commands.find(cmd => { return cmd.name === funcName });
+                    if (!cmd) {
+                        let start = new Position(index, m.index);
+                        let end = new Position(index, m.index + m[1].length);
+                        let diagnostic = new Diagnostic(new Range(start, end), 'Command "' + m[1] + '" is not supported by current device', DiagnosticSeverity.Error);
+                        diagnostics.push(diagnostic);
+                    } else {
+                        // TODO find a propper regex if possible
+                        // get the arguments
+                        let args = '';
+                        let bs = 0;
+                        let offset = m.index + m[1].length;
+                        let c;
+                        while (offset < line.text.length) {
+                            c = line.text.charAt(offset);
+                            if (c !== '(' && bs === 0) {
+                                break;
+                            }
+                            if (c === '(') {
+                                bs++;
+                            } else if (c === ')') {
+                                bs--;
+                            }
+                            args += c;
+                            offset++;
+                        }
+                        args = args.substr(1, args.length - 2);
+
+                        let ac = args ? args.split(',').length : 0;
+                        if (ac !== cmd.argcount) {
+                            let start = new Position(index, m.index);
+                            let end = new Position(index, m.index + m[1].length);
+                            let diagnostic = new Diagnostic(new Range(start, end), 'Command "' + m[1] + '" has wrong number of arguments', DiagnosticSeverity.Error);
+                            diagnostics.push(diagnostic);
+                        }
+                    }
                 }
             }
 
             if (diagnostics.length) {
                 this._diagnosticCollection.set(doc.uri, diagnostics);
+                return false;
             }
+
+            return true;
         }
     }
 }

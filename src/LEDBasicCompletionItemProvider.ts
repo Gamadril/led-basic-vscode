@@ -2,12 +2,11 @@
 
 import { CompletionItemProvider, TextDocument, CancellationToken, CompletionItem, ProviderResult, Position, CompletionContext } from 'vscode';
 import { API } from './LEDBasicAPI';
+import { deviceSelector } from './DeviceSelector';
 
 export class LEDBasicCompletionItemProvider implements CompletionItemProvider {
-    private _deviceCommands: string[] = [];
-
-    public provideCompletionItems(document: TextDocument, position: Position, token: CancellationToken, context: CompletionContext): ProviderResult<CompletionItem[]> {
-
+    provideCompletionItems(document: TextDocument, position: Position, token: CancellationToken, context: CompletionContext): ProviderResult<CompletionItem[]> {
+        let commands = deviceSelector.selectedDevice().commands;
         let lineText = document.lineAt(position.line).text
         let lineTillCurrentPosition = lineText.substr(0, position.character)
         let parts = /([a-zA-Z]+).(\w*)$/g.exec(lineTillCurrentPosition);
@@ -17,7 +16,7 @@ export class LEDBasicCompletionItemProvider implements CompletionItemProvider {
             let lib = API[libName];
             if (lib) {
                 Object.keys(lib).forEach(func => {
-                    if (this._deviceCommands.indexOf(func) !== -1) {
+                    if (commands.find(cmd => { return cmd.name === func })) {
                         result.push(new CompletionItem(func));
                     }
                 });
@@ -25,9 +24,5 @@ export class LEDBasicCompletionItemProvider implements CompletionItemProvider {
         }
 
         return result;
-    }
-
-    public setSupportedCommands(commands: string[]) {
-        this._deviceCommands = commands;
     }
 }

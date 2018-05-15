@@ -77,7 +77,6 @@ LEDBASIC {
 
 // Comparison
     Comparison = caseInsensitive<"if"> Expression (caseInsensitive<"then">)? Statement (caseInsensitive<"else"> Statement)?
-    //Comparison = caseInsensitive<"if"> Expression caseInsensitive<"then"> Statement caseInsensitive<"else"> Statement
 
 // Jump
     Jump = (caseInsensitive<"goto"> | caseInsensitive<"gosub">) decimalValue

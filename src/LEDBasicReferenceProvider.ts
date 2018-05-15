@@ -1,25 +1,37 @@
-import { ReferenceProvider, TextDocument, Position, CancellationToken, ProviderResult, ReferenceContext, Location, Range } from "vscode";
-
 'use strict';
+import { ReferenceProvider, TextDocument, Position, CancellationToken, ProviderResult, ReferenceContext, Location, Range } from "vscode";
 
 export class LEDBasicReferenceProvider implements ReferenceProvider {
     public provideReferences(document: TextDocument, position: Position, context: ReferenceContext, token: CancellationToken): ProviderResult<Location[]> {
-        let wordRange = document.getWordRangeAtPosition(position);
-        if (!wordRange) {
-            return null;
+        var result = [];
+        var label = '';
+        var code = document.getText();
+        var match;
+        var reg: RegExp | null = null;
+
+        // check for a label
+        var wordRange = document.getWordRangeAtPosition(position, new RegExp('[0-9]+:', 'i'));
+        if (wordRange) {
+            label = document.getText(wordRange);
+            label = label.substring(0, label.length - 1);
+            reg = new RegExp('(?:goto|gosub|read)\\s\\b(' + label + ')\\b', 'ig');
+        } else {
+            // check variables
+            wordRange = document.getWordRangeAtPosition(position, new RegExp('[a-zA-Z]', 'i'));
+            if (wordRange) {
+                label = document.getText(wordRange);
+                reg = new RegExp('\\b(' + label + ')\\b', 'ig');
+            }
         }
 
-        let label = document.getText(wordRange);
-        let code = document.getText();
+        if (reg) {
+            while (match = reg.exec(code)) {
+                let index = match.index + match[0].indexOf(match[1]);
+                let start = document.positionAt(index);
+                let end = document.positionAt(index + match[1].length);
 
-        let reg = new RegExp('(' + label + ')', 'gi');
-        let m;
-        let result = [];
-        while (m = reg.exec(code)) {
-            let start = document.positionAt(m.index);
-            let end = document.positionAt(m.index + m[1].length);
-
-            result.push(new Location(document.uri, new Range(start, end)));
+                result.push(new Location(document.uri, new Range(start, end)));
+            }
         }
         return result;
     }

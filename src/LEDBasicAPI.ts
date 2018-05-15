@@ -128,6 +128,9 @@ const raw2 = praw('raw2');
 const raw3 = praw('raw3');
 const raw4 = praw('raw4');
 
+/**
+ * List of API functions for code completion
+ */
 export const API: ILibEntries = {
     KEYWORDS: {
         random: {

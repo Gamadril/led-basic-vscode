@@ -2,7 +2,7 @@
     "name": "led-basic",
     "displayName": "LED Basic",
     "description": "LED Basic language support for Visual Studio Code",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "publisher": "Gamadril",
     "license": "MIT",
     "engines": {
@@ -13,8 +13,7 @@
     ],
     "qna": false,
     "contributes": {
-        "languages": [
-            {
+        "languages": [{
                 "id": "led_basic",
                 "aliases": [
                     "LED Basic",
@@ -24,21 +23,43 @@
                     ".bas"
                 ],
                 "configuration": "./language-configuration.json"
+            },
+            {
+                "id": "led_basic-output",
+                "mimetypes": [
+                    "text/x-code-output"
+                ]
             }
         ],
-        "grammars": [
-            {
+        "grammars": [{
                 "language": "led_basic",
                 "scopeName": "source.led_basic",
                 "path": "./syntaxes/led_basic.tmLanguage.json"
+            },
+            {
+                "language": "led_basic-output",
+                "scopeName": "output.led_basic",
+                "path": "./syntaxes/led_basic.output.tmLanguage.json"
             }
         ],
-        "snippets": [
+        "snippets": [{
+            "language": "led_basic",
+            "path": "./snippets/led_basic.json"
+        }],
+        "commands": [{
+                "command": "led_basic.device",
+                "title": "LED-Basic: Select target device"
+            },
             {
-                "language": "led_basic",
-                "path": "./snippets/led_basic.json"
+                "command": "led_basic.upload",
+                "title": "LED-Basic: Upload code to device"
             }
-        ]
+        ],
+        "keybindings": [{
+            "command": "led_basic.upload",
+            "key": "ctrl+alt+u",
+            "mac": "cmd+alt+u"
+        }]
     },
     "main": "./build/extension",
     "activationEvents": [
@@ -49,7 +70,7 @@
         "url": "https://github.com/Gamadril/led-basic-vscode.git"
     },
     "scripts": {
-        "vscode:prepublish": "sed -i '' 's/build\\/extension/out\\/extension/' package.json && rm -rf ./out && mkdir ./out && tsc -p ./ && node ./node_modules/uglify-es/bin/uglifyjs build/*.js -o ./out/extension.js",
+        "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
         "postinstall": "node ./node_modules/vscode/bin/install",
@@ -59,7 +80,6 @@
         "@types/mocha": "^2.2.42",
         "@types/node": "^7.0.43",
         "typescript": "^2.5.2",
-        "uglify-es": "^3.3.9",
         "vscode": "^1.1.5"
     },
     "dependencies": {
