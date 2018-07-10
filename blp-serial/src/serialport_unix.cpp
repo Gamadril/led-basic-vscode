@@ -1,70 +1,35 @@
-#include "./serialport.h"
-#include "./serialport_poller.h"
-#include <sys/file.h>
-#include <unistd.h>
-#include <fcntl.h>
+#include "serialport_unix.h"
+#include "serialport.h"
+
 #include <errno.h>
+#include <fcntl.h>
+#include <sys/file.h>
 #include <termios.h>
+#include <unistd.h>
 
 #ifdef __APPLE__
 #include <AvailabilityMacros.h>
 #include <sys/param.h>
-#include <IOKit/IOKitLib.h>
-#include <IOKit/IOCFPlugIn.h>
-#include <IOKit/usb/IOUSBLib.h>
-#include <IOKit/serial/IOSerialKeys.h>
-
-uv_mutex_t list_mutex;
-Boolean lockInitialised = FALSE;
 #endif
 
-#if defined(MAC_OS_X_VERSION_10_4) && (MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_4)
-#include <sys/ioctl.h>
+#if defined(MAC_OS_X_VERSION_10_4) &&                                          \
+    (MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_4)
 #include <IOKit/serial/ioss.h>
-#endif
-
-#if defined(__OpenBSD__)
 #include <sys/ioctl.h>
-#endif
 
-#if defined(__linux__)
+#elif defined(__OpenBSD__)
 #include <sys/ioctl.h>
-#include <linux/serial.h>
+
+#elif defined(__linux__)
 #include "serialport_linux.h"
+#include <linux/serial.h>
+#include <sys/ioctl.h>
 #endif
 
-struct UnixPlatformOptions : OpenBatonPlatformOptions
-{
-  uint8_t vmin;
-  uint8_t vtime;
-};
-
-OpenBatonPlatformOptions *ParsePlatformOptions(const v8::Local<v8::Object> &options)
-{
-  Nan::HandleScope scope;
-
-  UnixPlatformOptions *result = new UnixPlatformOptions();
-  result->vmin = getIntFromObject(options, "vmin");
-  result->vtime = getIntFromObject(options, "vtime");
-
-  return result;
-}
-
-int ToBaudConstant(int baudRate);
-int ToDataBitsConstant(int dataBits);
 int ToStopBitsConstant(SerialPortStopBits stopBits);
 
-void AfterOpenSuccess(int fd, Nan::Callback *dataCallback, Nan::Callback *disconnectedCallback, Nan::Callback *errorCallback)
-{
-  delete dataCallback;
-  delete errorCallback;
-  delete disconnectedCallback;
-}
-
-int ToBaudConstant(int baudRate)
-{
-  switch (baudRate)
-  {
+int ToBaudConstant(int baudRate) {
+  switch (baudRate) {
   case 0:
     return B0;
   case 50:
@@ -133,30 +98,8 @@ int ToBaudConstant(int baudRate)
   return -1;
 }
 
-#ifdef __APPLE__
-typedef struct SerialDevice
-{
-  char port[MAXPATHLEN];
-  UInt16 vendorId;
-  UInt16 productId;
-  UInt16 bcdDevice;
-  char manufacturer[MAXPATHLEN];
-  char serialNumber[MAXPATHLEN];
-  char deviceName[MAXPATHLEN];
-} stSerialDevice;
-
-typedef struct DeviceListItem
-{
-  struct SerialDevice value;
-  struct DeviceListItem *next;
-  int *length;
-} stDeviceListItem;
-#endif
-
-int ToDataBitsConstant(int dataBits)
-{
-  switch (dataBits)
-  {
+int ToDataBitsConstant(int dataBits) {
+  switch (dataBits) {
   case 8:
   default:
     return CS8;
@@ -170,21 +113,19 @@ int ToDataBitsConstant(int dataBits)
   return -1;
 }
 
-void EIO_Open(uv_work_t *req)
-{
+void EIO_Open(uv_work_t *req) {
   OpenBaton *data = static_cast<OpenBaton *>(req->data);
 
   int flags = (O_RDWR | O_NOCTTY | O_NONBLOCK | O_CLOEXEC | O_SYNC);
   int fd = open(data->path, flags);
 
-  if (-1 == fd)
-  {
-    snprintf(data->errorString, sizeof(data->errorString), "Error: %s, cannot open %s", strerror(errno), data->path);
+  if (-1 == fd) {
+    snprintf(data->errorString, sizeof(data->errorString),
+             "Error: %s, cannot open %s", strerror(errno), data->path);
     return;
   }
 
-  if (-1 == setup(fd, data))
-  {
+  if (-1 == setup(fd, data)) {
     close(fd);
     return;
   }
@@ -192,123 +133,106 @@ void EIO_Open(uv_work_t *req)
   data->result = fd;
 }
 
-int setBaudRate(ConnectionOptionsBaton *data)
-{
+int setBaudRate(ConnectionOptionsBaton *data) {
   // lookup the standard baudrates from the table
   int baudRate = ToBaudConstant(data->baudRate);
   int fd = data->fd;
 
   // get port options
   struct termios options;
-  if (tcgetattr(fd, &options))
-  {
-    snprintf(data->errorString, sizeof(data->errorString), "Error: tcgetattr encountering %s", strerror(errno));
+  if (-1 == tcgetattr(fd, &options)) {
+    snprintf(data->errorString, sizeof(data->errorString),
+             "Error: %s setting custom baud rate of %d", strerror(errno),
+             data->baudRate);
     return -1;
   }
 
-// If there is a custom baud rate on linux you can do the following trick
+// If there is a custom baud rate on linux you can do the following trick with
+// B38400
 #if defined(__linux__) && defined(ASYNC_SPD_CUST)
-    if (baudRate == -1) {
-      int err = linuxSetCustomBaudRate(fd, data->baudRate);
+  if (baudRate == -1) {
+    int err = linuxSetCustomBaudRate(fd, data->baudRate);
 
-      if (err == -1) {
-        snprintf(data->errorString, sizeof(data->errorString),
-                 "Error: %s || while retrieving termios2 info", strerror(errno));
-        return -1;
-      } else if (err == -2) {
-        snprintf(data->errorString, sizeof(data->errorString),
-                 "Error: %s || while setting custom baud rate of %d", strerror(errno), data->baudRate);
-        return -1;
-      }
-
-      return 1;
+    if (err == -1) {
+      snprintf(data->errorString, sizeof(data->errorString),
+               "Error: %s || while retrieving termios2 info", strerror(errno));
+      return -1;
+    } else if (err == -2) {
+      snprintf(data->errorString, sizeof(data->errorString),
+               "Error: %s || while setting custom baud rate of %d",
+               strerror(errno), data->baudRate);
+      return -1;
     }
+
+    return 1;
+  }
 #endif
 
 // On OS X, starting with Tiger, we can set a custom baud rate with ioctl
-#if defined(MAC_OS_X_VERSION_10_4) && (MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_4)
-  if (-1 == baudRate)
-  {
+#if defined(MAC_OS_X_VERSION_10_4) &&                                          \
+    (MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_4)
+  if (-1 == baudRate) {
     speed_t speed = data->baudRate;
-    if (-1 == ioctl(fd, IOSSIOSPEED, &speed))
-    {
-      snprintf(data->errorString, sizeof(data->errorString), "Error: %s calling ioctl(.., IOSSIOSPEED, %ld )", strerror(errno), speed);
+    if (-1 == ioctl(fd, IOSSIOSPEED, &speed)) {
+      snprintf(data->errorString, sizeof(data->errorString),
+               "Error: %s calling ioctl(.., IOSSIOSPEED, %ld )",
+               strerror(errno), speed);
       return -1;
-    }
-    else
-    {
+    } else {
+      tcflush(fd, TCIOFLUSH);
       return 1;
     }
   }
 #endif
 
-  // If we have a good baud rate set it and lets go
-  if (-1 != baudRate)
-  {
-    cfsetospeed(&options, baudRate);
-    cfsetispeed(&options, baudRate);
-    tcflush(fd, TCIFLUSH);
-    tcsetattr(fd, TCSANOW, &options);
-    return 1;
+  if (-1 == baudRate) {
+    snprintf(data->errorString, sizeof(data->errorString),
+             "Error baud rate of %d is not supported on your platform",
+             data->baudRate);
+    return -1;
   }
 
-  snprintf(data->errorString, sizeof(data->errorString), "Error baud rate of %d is not supported on your platform", data->baudRate);
-  return -1;
+  // If we have a good baud rate set it and lets go
+  cfsetospeed(&options, baudRate);
+  cfsetispeed(&options, baudRate);
+  // throw away all the buffered data
+  tcflush(fd, TCIOFLUSH);
+  // make the changes now
+  tcsetattr(fd, TCSANOW, &options);
+  return 1;
 }
 
-void EIO_Update(uv_work_t *req)
-{
-  ConnectionOptionsBaton *data = static_cast<ConnectionOptionsBaton *>(req->data);
+void EIO_Update(uv_work_t *req) {
+  ConnectionOptionsBaton *data =
+      static_cast<ConnectionOptionsBaton *>(req->data);
   setBaudRate(data);
 }
 
-int setup(int fd, OpenBaton *data)
-{
-  UnixPlatformOptions *platformOptions = static_cast<UnixPlatformOptions *>(data->platformOptions);
-
+int setup(int fd, OpenBaton *data) {
   int dataBits = ToDataBitsConstant(data->dataBits);
-  if (-1 == dataBits)
-  {
-    snprintf(data->errorString, sizeof(data->errorString), "Invalid data bits setting %d", data->dataBits);
+  if (-1 == dataBits) {
+    snprintf(data->errorString, sizeof(data->errorString),
+             "Invalid data bits setting %d", data->dataBits);
     return -1;
   }
 
   // Snow Leopard doesn't have O_CLOEXEC
-  if (-1 == fcntl(fd, F_SETFD, FD_CLOEXEC))
-  {
-    snprintf(data->errorString, sizeof(data->errorString), "Error %s Cannot open %s", strerror(errno), data->path);
+  if (-1 == fcntl(fd, F_SETFD, FD_CLOEXEC)) {
+    snprintf(data->errorString, sizeof(data->errorString),
+             "Error %s Cannot open %s", strerror(errno), data->path);
     return -1;
   }
-
-  // Copy the connection options into the ConnectionOptionsBaton to set the baud rate
-  ConnectionOptionsBaton *connectionOptions = new ConnectionOptionsBaton();
-  memset(connectionOptions, 0, sizeof(ConnectionOptionsBaton));
-  connectionOptions->fd = fd;
-  connectionOptions->baudRate = data->baudRate;
-
-  if (-1 == setBaudRate(connectionOptions))
-  {
-    strncpy(data->errorString, connectionOptions->errorString, sizeof(data->errorString));
-    delete (connectionOptions);
-    return -1;
-  }
-  delete (connectionOptions);
 
   // Get port configuration for modification
   struct termios options;
-  if (tcgetattr(fd, &options))
-  {
-    snprintf(data->errorString, sizeof(data->errorString), "Error: tcgetattr encountering %s", strerror(errno));
-    return -1;
-  }
+  tcgetattr(fd, &options);
 
   // IGNPAR: ignore bytes with parity errors
   options.c_iflag = IGNPAR;
 
-  // ICRNL: map CR to NL (otherwise a CR input on the other computer will not terminate input)
-  // Future potential option
-  // options.c_iflag = ICRNL;
-  // otherwise make device raw (no other input processing)
+  // ICRNL: map CR to NL (otherwise a CR input on the other computer will not
+  // terminate input) Future potential option options.c_iflag = ICRNL; otherwise
+  // make device raw (no other input processing)
 
   // Specify data bits
   options.c_cflag &= ~CSIZE;
@@ -316,31 +240,26 @@ int setup(int fd, OpenBaton *data)
 
   options.c_cflag &= ~(CRTSCTS);
 
-  if (data->rtscts)
-  {
+  if (data->rtscts) {
     options.c_cflag |= CRTSCTS;
     // evaluate specific flow control options
   }
 
   options.c_iflag &= ~(IXON | IXOFF | IXANY);
 
-  if (data->xon)
-  {
+  if (data->xon) {
     options.c_iflag |= IXON;
   }
 
-  if (data->xoff)
-  {
+  if (data->xoff) {
     options.c_iflag |= IXOFF;
   }
 
-  if (data->xany)
-  {
+  if (data->xany) {
     options.c_iflag |= IXANY;
   }
 
-  switch (data->parity)
-  {
+  switch (data->parity) {
   case SERIALPORT_PARITY_NONE:
     options.c_cflag &= ~PARENB;
     // options.c_cflag &= ~CSTOPB;
@@ -362,12 +281,12 @@ int setup(int fd, OpenBaton *data)
     // options.c_cflag |= CS7;
     break;
   default:
-    snprintf(data->errorString, sizeof(data->errorString), "Invalid parity setting %d", data->parity);
+    snprintf(data->errorString, sizeof(data->errorString),
+             "Invalid parity setting %d", data->parity);
     return -1;
   }
 
-  switch (data->stopBits)
-  {
+  switch (data->stopBits) {
   case SERIALPORT_STOPBITS_ONE:
     options.c_cflag &= ~CSTOPB;
     break;
@@ -375,14 +294,14 @@ int setup(int fd, OpenBaton *data)
     options.c_cflag |= CSTOPB;
     break;
   default:
-    snprintf(data->errorString, sizeof(data->errorString), "Invalid stop bits setting %d", data->stopBits);
+    snprintf(data->errorString, sizeof(data->errorString),
+             "Invalid stop bits setting %d", data->stopBits);
     return -1;
   }
 
   options.c_cflag |= CLOCAL; // ignore status lines
   options.c_cflag |= CREAD;  // enable receiver
-  if (data->hupcl)
-  {
+  if (data->hupcl) {
     options.c_cflag |= HUPCL; // drop DTR (i.e. hangup) on close
   }
 
@@ -392,449 +311,67 @@ int setup(int fd, OpenBaton *data)
   // ICANON makes partial lines not readable. It should be optional.
   // It works with ICRNL.
   options.c_lflag = 0; // ICANON;
+  options.c_cc[VMIN] = data->vmin;
+  options.c_cc[VTIME] = data->vtime;
 
-  options.c_cc[VMIN] = platformOptions->vmin;
-  options.c_cc[VTIME] = platformOptions->vtime;
-
-  // why?
-  tcflush(fd, TCIFLUSH);
-
-  // check for error?
+  // Note that tcsetattr() returns success if any of the requested changes could
+  // be successfully carried out. Therefore, when making multiple changes it may
+  // be necessary to follow this call with a further call to tcgetattr() to
+  // check that all changes have been performed successfully. This also fails on
+  // OSX
   tcsetattr(fd, TCSANOW, &options);
 
-  if (data->lock)
-  {
-    if (-1 == flock(fd, LOCK_EX | LOCK_NB))
-    {
-      snprintf(data->errorString, sizeof(data->errorString), "Error %s Cannot lock port", strerror(errno));
+  if (data->lock) {
+    if (-1 == flock(fd, LOCK_EX | LOCK_NB)) {
+      snprintf(data->errorString, sizeof(data->errorString),
+               "Error %s Cannot lock port", strerror(errno));
       return -1;
     }
   }
 
+  // Copy the connection options into the ConnectionOptionsBaton to set the baud
+  // rate
+  ConnectionOptionsBaton *connectionOptions = new ConnectionOptionsBaton();
+  connectionOptions->fd = fd;
+  connectionOptions->baudRate = data->baudRate;
+
+  if (-1 == setBaudRate(connectionOptions)) {
+    strncpy(data->errorString, connectionOptions->errorString,
+            sizeof(data->errorString));
+    delete (connectionOptions);
+    return -1;
+  }
+  delete (connectionOptions);
+
+  // flush all unread and wrote data up to this point because it could have been
+  // received or sent with bad settings Not needed since setBaudRate does this
+  // for us tcflush(fd, TCIOFLUSH);
+
   return 1;
 }
 
-void EIO_Write(uv_work_t *req)
-{
-  QueuedWrite *queuedWrite = static_cast<QueuedWrite *>(req->data);
-  WriteBaton *data = static_cast<WriteBaton *>(queuedWrite->baton);
-  int bytesWritten = 0;
-
-  do
-  {
-    errno = 0; // probably don't need this
-    bytesWritten = write(data->fd, data->bufferData + data->offset, data->bufferLength - data->offset);
-    if (-1 != bytesWritten)
-    {
-      // there wasn't an error, do the math on what we actually wrote and keep writing until finished
-      data->offset += bytesWritten;
-      continue;
-    }
-
-    // The write call was interrupted before anything was written, try again immediately.
-    if (errno == EINTR)
-    {
-      // why try again right away instead of in another event loop?
-      continue;
-    }
-
-    // Try again in another event loop
-    if (errno == EAGAIN || errno == EWOULDBLOCK)
-    {
-      return;
-    }
-
-    // EBAD would mean we're "disconnected"
-
-    // a real error so lets bail
-    snprintf(data->errorString, sizeof(data->errorString), "Error: %s, calling write", strerror(errno));
-    return;
-  } while (data->bufferLength > data->offset);
-}
-
-void EIO_Close(uv_work_t *req)
-{
-  CloseBaton *data = static_cast<CloseBaton *>(req->data);
-  int fd = data->fd;
+void EIO_Close(uv_work_t *req) {
+  VoidBaton *data = static_cast<VoidBaton *>(req->data);
 
 #ifdef __APPLE__
-  // update baud rate before closing to exit bootloader mode (needed only for OSX for some reason)
-  // ignore all possible errors and close the port anyway at the end
+  // update baud rate before closing to exit bootloader mode (needed only for
+  // OSX for some reason) ignore all possible errors and close the port anyway
+  // at the end
   struct termios options;
-  tcgetattr(fd, &options);
+  tcgetattr(data->fd, &options);
   cfsetospeed(&options, 9600);
   cfsetispeed(&options, 9600);
-  tcflush(fd, TCIFLUSH);
-  tcsetattr(fd, TCSANOW, &options);
+  tcflush(data->fd, TCIFLUSH);
+  tcsetattr(data->fd, TCSANOW, &options);
 #endif
 
-  if (-1 == close(fd))
-  {
-    snprintf(data->errorString, sizeof(data->errorString), "Error: %s, unable to close fd %d", strerror(errno), fd);
+  if (-1 == close(data->fd)) {
+    snprintf(data->errorString, sizeof(data->errorString),
+             "Error: %s, unable to close fd %d", strerror(errno), data->fd);
   }
 }
 
-#ifdef __APPLE__
-
-// Function prototypes
-static kern_return_t FindModems(io_iterator_t *matchingServices);
-static io_service_t GetUsbDevice(io_service_t service);
-static stDeviceListItem *GetSerialDevices();
-
-static kern_return_t FindModems(io_iterator_t *matchingServices)
-{
-  kern_return_t kernResult;
-  CFMutableDictionaryRef classesToMatch;
-  classesToMatch = IOServiceMatching(kIOSerialBSDServiceValue);
-  if (classesToMatch != NULL)
-  {
-    CFDictionarySetValue(classesToMatch,
-                         CFSTR(kIOSerialBSDTypeKey),
-                         CFSTR(kIOSerialBSDModemType));
-  }
-
-  kernResult = IOServiceGetMatchingServices(kIOMasterPortDefault, classesToMatch, matchingServices);
-
-  return kernResult;
-}
-
-static io_service_t GetUsbDevice(io_service_t service)
-{
-  IOReturn status;
-  io_iterator_t iterator = 0;
-  io_service_t device = 0;
-
-  if (!service)
-  {
-    return device;
-  }
-
-  status = IORegistryEntryCreateIterator(service,
-                                         kIOServicePlane,
-                                         (kIORegistryIterateParents | kIORegistryIterateRecursively),
-                                         &iterator);
-
-  if (status == kIOReturnSuccess)
-  {
-    io_service_t currentService;
-    while ((currentService = IOIteratorNext(iterator)) && device == 0)
-    {
-      io_name_t serviceName;
-      status = IORegistryEntryGetNameInPlane(currentService, kIOServicePlane, serviceName);
-      if (status == kIOReturnSuccess && IOObjectConformsTo(currentService, kIOUSBDeviceClassName))
-      {
-        device = currentService;
-      }
-      else
-      {
-        // Release the service object which is no longer needed
-        (void)IOObjectRelease(currentService);
-      }
-    }
-
-    // Release the iterator
-    (void)IOObjectRelease(iterator);
-  }
-
-  return device;
-}
-
-static void ExtractUsbInformation(stSerialDevice *serialDevice, IOUSBDeviceInterface **deviceInterface)
-{
-  kern_return_t kernResult;
-
-  UInt16 vendorID;
-  kernResult = (*deviceInterface)->GetDeviceVendor(deviceInterface, &vendorID);
-  if (KERN_SUCCESS == kernResult)
-  {
-    serialDevice->vendorId = vendorID;
-  }
-
-  UInt16 productID;
-  kernResult = (*deviceInterface)->GetDeviceProduct(deviceInterface, &productID);
-  if (KERN_SUCCESS == kernResult)
-  {
-    serialDevice->productId = productID;
-  }
-
-  UInt16 bcdDevice;
-  kernResult = (*deviceInterface)->GetDeviceReleaseNumber(deviceInterface, &bcdDevice);
-  if (KERN_SUCCESS == kernResult)
-  {
-    serialDevice->bcdDevice = bcdDevice;
-  }
-}
-
-static stDeviceListItem *GetSerialDevices()
-{
-  kern_return_t kernResult;
-  io_iterator_t serialPortIterator;
-  char bsdPath[MAXPATHLEN];
-
-  kernResult = FindModems(&serialPortIterator);
-
-  if (kernResult != KERN_SUCCESS || !IOIteratorIsValid(serialPortIterator)) {
-    return NULL;
-  }
-
-  io_service_t modemService;
-  kernResult = KERN_FAILURE;
-  Boolean modemFound = false;
-
-  // Initialize the returned path
-  *bsdPath = '\0';
-
-  stDeviceListItem *devices = NULL;
-  stDeviceListItem *lastDevice = NULL;
-  int length = 0;
-
-  while ((modemService = IOIteratorNext(serialPortIterator)))
-  {
-    CFTypeRef bsdPathAsCFString;
-    bsdPathAsCFString = IORegistryEntrySearchCFProperty(
-        modemService,
-        kIOServicePlane,
-        CFSTR(kIOCalloutDeviceKey),
-        kCFAllocatorDefault,
-        kIORegistryIterateRecursively);
-
-    if (bsdPathAsCFString)
-    {
-      Boolean result;
-
-      // Convert the path from a CFString to a C (NUL-terminated)
-      result = CFStringGetCString((CFStringRef)bsdPathAsCFString,
-                                  bsdPath,
-                                  sizeof(bsdPath),
-                                  kCFStringEncodingUTF8);
-      CFRelease(bsdPathAsCFString);
-
-      if (result)
-      {
-        stDeviceListItem *deviceListItem = (stDeviceListItem *)malloc(sizeof(stDeviceListItem));
-        stSerialDevice *serialDevice = &(deviceListItem->value);
-        strcpy(serialDevice->port, bsdPath);
-        serialDevice->manufacturer[0] = '\0';
-        serialDevice->serialNumber[0] = '\0';
-        serialDevice->deviceName[0] = '\0';
-        deviceListItem->next = NULL;
-        deviceListItem->length = &length;
-
-        if (devices == NULL)
-        {
-          devices = deviceListItem;
-        }
-        else
-        {
-          lastDevice->next = deviceListItem;
-        }
-
-        lastDevice = deviceListItem;
-        length++;
-
-        modemFound = true;
-        kernResult = KERN_SUCCESS;
-
-        uv_mutex_lock(&list_mutex);
-
-        io_service_t device = GetUsbDevice(modemService);
-
-        if (device)
-        {
-          CFStringRef manufacturerAsCFString = (CFStringRef)IORegistryEntryCreateCFProperty(device,
-                                                                                            CFSTR(kUSBVendorString),
-                                                                                            kCFAllocatorDefault,
-                                                                                            0);
-
-          if (manufacturerAsCFString)
-          {
-            Boolean result;
-            char manufacturer[MAXPATHLEN];
-
-            // Convert from a CFString to a C (NUL-terminated)
-            result = CFStringGetCString(manufacturerAsCFString,
-                                        manufacturer,
-                                        sizeof(manufacturer),
-                                        kCFStringEncodingUTF8);
-
-            if (result)
-            {
-              strcpy(serialDevice->manufacturer, manufacturer);
-            }
-
-            CFRelease(manufacturerAsCFString);
-          }
-
-          CFStringRef serialNumberAsCFString = (CFStringRef)IORegistryEntrySearchCFProperty(device,
-                                                                                            kIOServicePlane,
-                                                                                            CFSTR(kUSBSerialNumberString),
-                                                                                            kCFAllocatorDefault,
-                                                                                            kIORegistryIterateRecursively);
-
-          if (serialNumberAsCFString)
-          {
-            Boolean result;
-            char serialNumber[MAXPATHLEN];
-
-            // Convert from a CFString to a C (NUL-terminated)
-            result = CFStringGetCString(serialNumberAsCFString,
-                                        serialNumber,
-                                        sizeof(serialNumber),
-                                        kCFStringEncodingUTF8);
-
-            if (result)
-            {
-              strcpy(serialDevice->serialNumber, serialNumber);
-            }
-
-            CFRelease(serialNumberAsCFString);
-          }
-
-          // Get the USB device's name.
-          io_name_t deviceName;
-          result = IORegistryEntryGetName(device, deviceName);
-          if (KERN_SUCCESS != result)
-          {
-            deviceName[0] = '\0';
-          }
-
-          CFStringRef deviceNameAsCFString = CFStringCreateWithCString(kCFAllocatorDefault, deviceName, kCFStringEncodingASCII);
-
-          if (deviceNameAsCFString)
-          {
-            Boolean result;
-            char deviceName[MAXPATHLEN];
-
-            // Convert from a CFString to a C (NUL-terminated)
-            result = CFStringGetCString(deviceNameAsCFString,
-                                        deviceName,
-                                        sizeof(deviceName),
-                                        kCFStringEncodingUTF8);
-
-            if (result)
-            {
-              strcpy(serialDevice->deviceName, deviceName);
-            }
-
-            CFRelease(deviceNameAsCFString);
-          }
-
-          IOCFPlugInInterface **plugInInterface = NULL;
-          SInt32 score;
-          HRESULT res;
-
-          IOUSBDeviceInterface **deviceInterface = NULL;
-
-          kernResult = IOCreatePlugInInterfaceForService(device, kIOUSBDeviceUserClientTypeID, kIOCFPlugInInterfaceID,
-                                                         &plugInInterface, &score);
-
-          if ((kIOReturnSuccess != kernResult) || !plugInInterface)
-          {
-            continue;
-          }
-
-          // Use the plugin interface to retrieve the device interface.
-          res = (*plugInInterface)->QueryInterface(plugInInterface, CFUUIDGetUUIDBytes(kIOUSBDeviceInterfaceID), (LPVOID *)&deviceInterface);
-
-          // Now done with the plugin interface.
-          (*plugInInterface)->Release(plugInInterface);
-
-          if (res || deviceInterface == NULL)
-          {
-            continue;
-          }
-
-          // Extract the desired Information
-          ExtractUsbInformation(serialDevice, deviceInterface);
-
-          // Release the Interface
-          (*deviceInterface)->Release(deviceInterface);
-
-          // Release the device
-          (void)IOObjectRelease(device);
-        }
-
-        uv_mutex_unlock(&list_mutex);
-      }
-    }
-
-    // Release the io_service_t now that we are done with it.
-    (void)IOObjectRelease(modemService);
-  }
-
-  IOObjectRelease(serialPortIterator); // Release the iterator.
-
-  return devices;
-}
-
-#endif
-
-void EIO_List(uv_work_t *req)
-{
-  ListBaton *data = static_cast<ListBaton *>(req->data);
-
-#ifndef __APPLE__
-  // This code exists in javascript for other unix platforms
-  snprintf(data->errorString, sizeof(data->errorString), "List is not Implemented");
-  return;
-#else
-  if (!lockInitialised)
-  {
-    uv_mutex_init(&list_mutex);
-    lockInitialised = TRUE;
-  }
-
-  stDeviceListItem *devices = GetSerialDevices();
-  if (devices != NULL && *(devices->length) > 0)
-  {
-    stDeviceListItem *next = devices;
-
-    for (int i = 0, len = *(devices->length); i < len; i++)
-    {
-      stSerialDevice device = (*next).value;
-
-      ListResultItem *resultItem = new ListResultItem();
-      resultItem->comName = device.port;
-
-      resultItem->vendorId = device.vendorId;
-      resultItem->productId = device.productId;
-      if (*device.manufacturer)
-      {
-        resultItem->manufacturer = device.manufacturer;
-      }
-      if (*device.serialNumber)
-      {
-        resultItem->serialNumber = device.serialNumber;
-      }
-      if (*device.deviceName)
-      {
-        resultItem->deviceName = device.deviceName;
-      }
-      resultItem->bcdDevice = device.bcdDevice;
-      data->results.push_back(resultItem);
-
-      stDeviceListItem *current = next;
-
-      if (next->next != NULL)
-      {
-        next = next->next;
-      }
-
-      free(current);
-    }
-  }
-#endif
-}
-
-void EIO_Flush(uv_work_t *req)
-{
-  FlushBaton *data = static_cast<FlushBaton *>(req->data);
-
-  data->result = tcflush(data->fd, TCIFLUSH);
-}
-
-void EIO_Set(uv_work_t *req)
-{
+void EIO_Set(uv_work_t *req) {
   SetBaton *data = static_cast<SetBaton *>(req->data);
 
   int bits;
@@ -842,56 +379,96 @@ void EIO_Set(uv_work_t *req)
 
   bits &= ~(TIOCM_RTS | TIOCM_CTS | TIOCM_DTR | TIOCM_DSR);
 
-  if (data->rts)
-  {
+  if (data->rts) {
     bits |= TIOCM_RTS;
   }
 
-  if (data->cts)
-  {
+  if (data->cts) {
     bits |= TIOCM_CTS;
   }
 
-  if (data->dtr)
-  {
+  if (data->dtr) {
     bits |= TIOCM_DTR;
   }
 
-  if (data->dsr)
-  {
+  if (data->dsr) {
     bits |= TIOCM_DSR;
   }
 
   int result = 0;
-  if (data->brk)
-  {
+  if (data->brk) {
     result = ioctl(data->fd, TIOCSBRK, NULL);
-  }
-  else
-  {
+  } else {
     result = ioctl(data->fd, TIOCCBRK, NULL);
   }
 
-  if (-1 == result)
-  {
-    snprintf(data->errorString, sizeof(data->errorString), "Error: %s, cannot drain", strerror(errno));
+  if (-1 == result) {
+    snprintf(data->errorString, sizeof(data->errorString),
+             "Error: %s, cannot set", strerror(errno));
     return;
   }
 
-  if (-1 == ioctl(data->fd, TIOCMSET, &bits))
-  {
-    snprintf(data->errorString, sizeof(data->errorString), "Error: %s, cannot drain", strerror(errno));
+  if (-1 == ioctl(data->fd, TIOCMSET, &bits)) {
+    snprintf(data->errorString, sizeof(data->errorString),
+             "Error: %s, cannot set", strerror(errno));
     return;
   }
 }
 
-void EIO_Drain(uv_work_t *req)
-{
-  DrainBaton *data = static_cast<DrainBaton *>(req->data);
+void EIO_Get(uv_work_t *req) {
+  GetBaton *data = static_cast<GetBaton *>(req->data);
 
-  if (-1 == tcdrain(data->fd))
-  {
-    snprintf(data->errorString, sizeof(data->errorString), "Error: %s, cannot drain", strerror(errno));
+  int bits;
+  if (-1 == ioctl(data->fd, TIOCMGET, &bits)) {
+    snprintf(data->errorString, sizeof(data->errorString),
+             "Error: %s, cannot get", strerror(errno));
+    return;
+  }
+
+  data->cts = bits & TIOCM_CTS;
+  data->dsr = bits & TIOCM_DSR;
+  data->dcd = bits & TIOCM_CD;
+}
+
+void EIO_GetBaudRate(uv_work_t *req) {
+  GetBaudRateBaton *data = static_cast<GetBaudRateBaton *>(req->data);
+  int outbaud;
+
+#if defined(__linux__) && defined(ASYNC_SPD_CUST)
+  if (-1 == linuxGetSystemBaudRate(data->fd, &outbaud)) {
+    snprintf(data->errorString, sizeof(data->errorString),
+             "Error: %s, cannot get baud rate", strerror(errno));
+    return;
+  }
+#endif
+
+// TODO(Fumon) implement on mac
+#if defined(MAC_OS_X_VERSION_10_4) &&                                          \
+    (MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_4)
+  snprintf(data->errorString, sizeof(data->errorString),
+           "Error: System baud rate check not implemented on darwin");
+  return;
+#endif
+
+  data->baudRate = outbaud;
+}
+
+void EIO_Flush(uv_work_t *req) {
+  VoidBaton *data = static_cast<VoidBaton *>(req->data);
+
+  if (-1 == tcflush(data->fd, TCIOFLUSH)) {
+    snprintf(data->errorString, sizeof(data->errorString),
+             "Error: %s, cannot flush", strerror(errno));
+    return;
+  }
+}
+
+void EIO_Drain(uv_work_t *req) {
+  VoidBaton *data = static_cast<VoidBaton *>(req->data);
+
+  if (-1 == tcdrain(data->fd)) {
+    snprintf(data->errorString, sizeof(data->errorString),
+             "Error: %s, cannot drain", strerror(errno));
     return;
   }
 }

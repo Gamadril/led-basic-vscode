@@ -56,7 +56,7 @@
 			"comment": "Keywords",
 			"patterns": [{
 				"comment": "Flow control keywords",
-				"match": "\\b(if|then|else|goto|gosub|return|to|downto|for|next|end|let|data|delay|random|read)\\b",
+				"match": "\\b(if|then|else|goto|gosub|return|to|downto|step|for|next|end|let|data|delay|random|read)\\b",
 				"name": "keyword.control.led_basic"
 			}]
 		}

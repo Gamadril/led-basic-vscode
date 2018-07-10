@@ -1,9 +1,11 @@
+'use strict';
+
 const path = require('path');
 const fs = require('fs');
 
-const loadLibrary = (parentFolder, libraryName) => {
+const loadLibrary = (parentFolder) => {
   const folderPath = parentFolder;
-  //const folderPath = path.join(parentFolder, '../../build/Release'); // DEBUGGING
+  //const folderPath = path.join(parentFolder, '../../../build/Release'); // DEBUGGING
   const dirCont = fs.readdirSync(folderPath);
   const files = dirCont.map(file => {
     if (file.endsWith('.node')) {

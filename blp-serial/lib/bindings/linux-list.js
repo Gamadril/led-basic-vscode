@@ -72,28 +72,28 @@ function lookupPort(file) {
   return execAsync(udevadm).then(udevParser);
 }
 
-function listUnix(callback) {
-  var dirName = '/dev';
-  readdirAsync(dirName)
-    .then(data => {
-      return data.map(file => {
-        return path.join(dirName, file)
+function listUnix() {
+  return new Promise((resolve, reject) => {
+    var dirName = '/dev';
+    readdirAsync(dirName)
+      .then(data => {
+        return data.map(file => {
+          return path.join(dirName, file)
+        })
       })
-    })
-    .then(promisedFilter(checkPathAndDevice))
-    .then(data => {
-      return Promise.all(data.map(lookupPort))
-    })
-    .then(data => {
-      return data.filter(dev => {
-        return dev.vendorId === 0x16C0;
-      });
-    })
-    .then(data => {
-      callback(null, data)
-    }, err => {
-      callback(err)
-    });
+      .then(promisedFilter(checkPathAndDevice))
+      .then(data => {
+        return Promise.all(data.map(lookupPort))
+      })
+      .then(data => {
+        return data.filter(dev => {
+          return dev.vendorId === 0x16C0;
+        });
+      })
+      .then(resolve)
+      .catch(reject)
+
+  });
 }
 
 module.exports = listUnix;

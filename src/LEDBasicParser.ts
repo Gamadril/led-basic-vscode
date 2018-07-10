@@ -4,7 +4,7 @@ import ohm = require('ohm-js')
 import fs = require('fs');
 import { getExtensionPath } from "./utils";
 import { Range, Position } from 'vscode';
-import { COLOR_ORDER } from './Device';
+import { COLOUR_ORDER } from './Device';
 
 interface IJumpTable { [label: string]: number; }
 interface IOperationList { [op: string]: number; }
@@ -20,7 +20,7 @@ export interface IConfig {
     white?: boolean;
     sys_led?: number;
     ledcnt?: number;
-    color_order?: COLOR_ORDER;
+    colour_order?: COLOUR_ORDER;
     cfg?: number;
     mbr?: number;
     led_type?: number;
@@ -345,16 +345,16 @@ class LEDBasicParser {
                         result.ledcnt = parseInt(cfg_param, 10);
                     } else if (cfg_id === 'C') {
                         if (cfg_param === 'RGB') {
-                            result.color_order = COLOR_ORDER.RGB;
+                            result.colour_order = COLOUR_ORDER.RGB;
                             result.white = false;
                         } else if (cfg_param === 'GRB') {
-                            result.color_order = COLOR_ORDER.GRB;
+                            result.colour_order = COLOUR_ORDER.GRB;
                             result.white = false;
                         } else if (cfg_param === 'GRBW') {
-                            result.color_order = COLOR_ORDER.GRB;
+                            result.colour_order = COLOUR_ORDER.GRB;
                             result.white = true;
                         } else if (cfg_param === 'RGBW') {
-                            result.color_order = COLOR_ORDER.RGB;
+                            result.colour_order = COLOUR_ORDER.RGB;
                             result.white = true;
                         }
                     } else if (cfg_id === 'M') {

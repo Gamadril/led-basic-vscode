@@ -1,5 +1,14 @@
 # LED Basic extension changelog
 
+## 1.1.1 - 10.07.2018
+- LED Basic v15.1.15 (however only available devices supported)
+- Added Outline View support showing labels with corresponding comment line above the label (if present)
+- Added basic terminal support for debug output (separate Terminal instance)
+- Updated API documentation
+- Fixed SB-Prog support
+- Updated included serialport library based on current state of node-serialport
+- Fixed issue #1
+
 ## 1.1.0 - 15.05.2018
 - Added `if` and `ifelse` snippets for correpsonding `If Then` and `If Then Else` statements
 - Added code uploader. Statusbar contains buttons for selecting a serial port and "Upload" for writing code to connected device

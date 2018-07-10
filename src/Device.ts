@@ -3,9 +3,9 @@
 import { QuickPickItem } from "vscode";
 
 /**
- * Color order constants
+ * Colour order constants
  */
-export enum COLOR_ORDER {
+export enum COLOUR_ORDER {
     RGB = 0xE4,
     GRB = 0xB4
 };
@@ -26,11 +26,13 @@ interface IMetaData {
     basver?: number;
     ledcnt?: number;
     default_ledcnt?: number;
-    color_order?: COLOR_ORDER;
+    colour_order?: COLOUR_ORDER;
     cfg?: number;
     mbr?: number;
     led_type?: number;
     spi_rate?: number;
+    needsSbProg?: boolean;
+    noPrint?: boolean;
 }
 
 /**
@@ -40,7 +42,7 @@ export class Device implements QuickPickItem {
     label: string;
     detail?: string | undefined;
     meta: IMetaData = {
-        sysCode: 0,
+        sysCode: 0
     };
     commands!: ICommand[];
 

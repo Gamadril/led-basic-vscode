@@ -1,7 +1,7 @@
 'use strict';
 
 import { StatusBarAlignment, window, StatusBarItem } from 'vscode';
-import { Device, COLOR_ORDER, ICommand } from './Device';
+import { Device, COLOUR_ORDER, ICommand } from './Device';
 
 const CMD_LED_BASIC = [dev('setled', 2), dev('setall', 1)];
 const CMD_LED_PWM = [dev('show'), dev('lrgb', 4), dev('lhsv', 4), dev('irgb', 4), dev('ihsv', 4), dev('iled', 2), dev('iall', 1), dev('irange', 3), dev('rainbow', 6), dev('copy', 2), dev('repeat', 3), dev('shift', 3), dev('mirror', 3), dev('blackout')];
@@ -10,8 +10,10 @@ const CMD_IO_KEY = [dev('waitkey'), dev('getkey'), dev('keystate')];
 const CMD_IO_RTC = [dev('getrtc', 1), dev('setrtc', 2)];
 const CMD_IO_LDR = [dev('getldr')];
 const CMD_IO_IR = [dev('getir')];
-const CMD_IO_PORT = [dev('setport', 1), dev('clrport', 1)];
+const CMD_IO_PORT_CLR = [dev('setport', 1), dev('clrport', 1)];
+const CMD_IO_PORT = CMD_IO_PORT_CLR.concat([dev('setport', 1)]);
 const CMD_IO_POTI = [dev('getpoti', 1)];
+//const CMD_IO_ADC = [dev('getadc', 1)];
 const CMD_IO_TEMP = [dev('gettemp')];
 const CMD_IO_XTEMP = [dev('xtempcnt'), dev('xtempval', 2)];
 const CMD_IO_SOUND = [dev('beep', 1)];
@@ -25,25 +27,28 @@ const CMD_LED_SEG = [dev('clear'), dev('pchar', 2), dev('achar', 4), dev('praw',
  */
 const DEVICES: Device[] = [
     {
-        label: 'LED-Badge (12)',
-        detail: 'Cell coin powered badge with 12 RGB-LEDs without PWM',
+        label: 'LED-Badge (12 LEDs)',
+        detail: 'Cell coin powered badge with 12 RGB-LEDs without PWM.',
         commands: CMD_LED_BASIC,
         meta: {
             sysCode: 0x3110,
-            ledcnt: 12
+            ledcnt: 12,
+            needsSbProg: true,
+            noPrint: true
         }
     },
     {
-        label: 'LED-Badge (16)',
-        detail: 'Cell coin powered badge with a button and 16 RGB-LEDs without PWM',
-        commands: CMD_LED_BASIC.concat(CMD_IO_KEY),
+        label: 'LED-Badge (16 LEDs)',
+        detail: 'Cell coin powered badge with a button and 16 RGB-LEDs without PWM.',
+        commands: CMD_LED_BASIC.concat(CMD_IO_KEY).concat(CMD_IO_PORT_CLR),
         meta: {
             sysCode: 0x3120,
-            ledcnt: 16
+            ledcnt: 16,
+            needsSbProg: true
         }
     },
     {
-        label: 'Basic-Pentagon',
+        label: 'Basic-Pentagon-Board',
         detail: 'Supports PWM LEDs, DS18B20 temp. sensor, RTC, LDR. 3 buttons on board.',
         commands: CMD_LED_PWM.concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_LDR).concat(CMD_IO_IR).concat(CMD_IO_PORT).concat(CMD_IO_TEMP),
         meta: {
@@ -51,7 +56,7 @@ const DEVICES: Device[] = [
         }
     },
     {
-        label: 'Basic-Budget',
+        label: 'Basic-Budget-Board',
         detail: 'Supports PWM LEDs, DS18B20 temp. sensor, RTC, LDR, buttons',
         commands: CMD_LED_PWM.concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_LDR).concat(CMD_IO_IR).concat(CMD_IO_PORT).concat(CMD_IO_TEMP),
         meta: {
@@ -61,7 +66,7 @@ const DEVICES: Device[] = [
     {
         label: 'Cronios 1',
         detail: 'Basis module for LED clocks',
-        commands: CMD_LED_PWM.concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_LDR).concat(CMD_IO_SOUND).concat(CMD_IO_ENC).concat(CMD_IO_EEP),
+        commands: CMD_LED_PWM.concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_LDR).concat(CMD_IO_SOUND).concat(CMD_IO_ENC).concat(CMD_IO_EEP).concat(CMD_IO_SYS),
         meta: {
             sysCode: 0x3140
         }
@@ -75,16 +80,17 @@ const DEVICES: Device[] = [
         }
     },
     {
-        label: 'WS2812-Booster',
+        label: 'Basic-Booster',
         detail: 'Compact module for WS2812 compatible LEDs',
         commands: CMD_LED_PWM.concat(CMD_IO_KEY).concat(CMD_IO_PORT).concat(CMD_IO_IR),
         meta: {
-            sysCode: 0x3160
+            sysCode: 0x3160,
+            needsSbProg: true
         }
     },
     {
         label: 'Cortex-Clock',
-        detail: 'Single color 4 digits display.',
+        detail: 'Single colour 4 digits display.',
         commands: CMD_LED_SEG.concat(CMD_LED_BRIGHT).concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_SOUND).concat(CMD_IO_EEP),
         meta: {
             sysCode: 0x3170,
@@ -92,7 +98,7 @@ const DEVICES: Device[] = [
         }
     },
     {
-        label: 'Temperature Sensor interface',
+        label: 'Temperature-Sensor Interface',
         detail: 'Supports up to 8 DS18B20 temp sensors.',
         commands: CMD_IO_XTEMP.concat(CMD_IO_PORT),
         meta: {
@@ -101,17 +107,18 @@ const DEVICES: Device[] = [
         }
     },
     {
-        label: 'Lightbar interface',
-        detail: 'Supports up to 16 single color LEDs.',
-        commands: CMD_LED_BASIC.concat(CMD_IO_KEY).concat(CMD_IO_PORT).concat(CMD_IO_POTI),
+        label: 'Running Light with 16 LEDs',
+        detail: 'Supports up to 16 single colour LEDs.',
+        commands: CMD_LED_BASIC.concat(CMD_LED_BRIGHT).concat(CMD_IO_KEY).concat(CMD_IO_PORT).concat(CMD_IO_POTI).concat(CMD_IO_EEP),
         meta: {
             sysCode: 0x3190,
             default_ledcnt: 16,
+            needsSbProg: true
         }
     },
     {
         label: 'All-In-One Power-M4-Board',
-        detail: 'Powerfull board with many supported features',
+        detail: 'Powerfull board with many supported features.',
         commands: CMD_LED_PWM.concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_LDR).concat(CMD_IO_IR).concat(CMD_IO_ENC).concat(CMD_IO_PORT).concat(CMD_IO_TEMP).concat(CMD_IO_SOUND).concat(CMD_IO_EEP),
         meta: {
             sysCode: 0x3210,
@@ -128,21 +135,22 @@ const DEVICES: Device[] = [
         }
     },
     {
-        label: 'APA-Booster',
-        detail: 'Compact module for APA 102 comaptible LEDs',
+        label: 'APA Booster',
+        detail: 'Compact module for APA102 comaptible LEDs.',
         commands: CMD_LED_PWM.concat(CMD_IO_KEY).concat(CMD_IO_PORT),
         meta: {
-            sysCode: 0x3230
+            sysCode: 0x3230,
+            needsSbProg: true
         }
     },
     {
-        label: 'Touch-stick (Nano)',
-        detail: 'Mini USB-Stick with 5 PWM LEDs and 2 touch buttons',
+        label: 'Touch-Stick (Nano)',
+        detail: 'Tiny USB-Stick with 5 PWM LEDs and 2 touch buttons.',
         commands: CMD_LED_PWM.concat(CMD_IO_KEY).concat(CMD_IO_EEP).concat(CMD_IO_SYS),
         meta: {
             sysCode: 0x3260,
             ledcnt: 5,
-            color_order: COLOR_ORDER.RGB,
+            colour_order: COLOUR_ORDER.RGB,
             cfg: 0x0E
         }
     }
@@ -175,8 +183,11 @@ class DeviceSelector {
         });
         if (device) {
             this._device = device;
-            this.update();
+        } else {
+            this._device = DEVICES[0];
         }
+        this.update();
+        return this._device;
     }
 
     /**
