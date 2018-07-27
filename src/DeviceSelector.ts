@@ -153,6 +153,15 @@ const DEVICES: Device[] = [
             colour_order: COLOUR_ORDER.RGB,
             cfg: 0x0E
         }
+    },
+    {
+        label: 'LED-Tube-Clock',
+        detail: '8-digit clock with 7-segment LED displays in VFD tube design.',
+        commands: CMD_LED_SEG.concat(CMD_LED_BRIGHT).concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_SOUND).concat(CMD_IO_EEP).concat(CMD_IO_SYS),
+        meta: {
+            sysCode: 0x3300,
+            ledcnt: 0
+        }
     }
 ];
 

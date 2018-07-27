@@ -4,6 +4,8 @@ import { SerialPort } from "./SerialPort";
 import { StatusBarItem, window, StatusBarAlignment } from "vscode";
 import { portSelector } from "./PortSelector";
 import { deviceSelector } from "./DeviceSelector";
+import { IParseResult, IConfig } from "./LEDBasicParser";
+import { COLOUR_ORDER } from "./Device";
 //import { dump } from "./utils";
 
 interface IDataPacket {
@@ -11,6 +13,7 @@ interface IDataPacket {
     data: Uint8Array;
 }
 
+const LBO_HEADER_SIZE = 16;
 const PROG_BAUD = 38400;
 
 enum ProgMode {
@@ -39,9 +42,20 @@ class Uploader {
         this._statusBarItem.show();
     }
 
-    upload(file: Uint8Array): Promise<void> {
+    upload(file: Uint8Array | IParseResult): Promise<void> {
         let sbProg = false;
         this._seqNr = 1;
+        let out_file: Uint8Array;
+
+        if (file instanceof Uint8Array) {
+            out_file = file;
+        } else {
+            out_file = new Uint8Array(file.code.length + LBO_HEADER_SIZE);
+            let header = this.createLboHeader(file.config, file.code.length);
+            out_file.set(header, 0);
+            out_file.set(file.code, LBO_HEADER_SIZE);
+        }
+
         return new Promise((resolve, reject) => {
             //console.log(dump(file));
             this.initPort()
@@ -55,7 +69,7 @@ class Uploader {
                     }
                 })
                 .then(() => {
-                    let nrPackets = Math.trunc((file.length + 255) / 256);
+                    let nrPackets = Math.trunc((out_file.length + 255) / 256);
                     let index = 0;
                     DEBUG && console.log('[UPLOAD] port opened. Sending total', nrPackets, 'packets');
 
@@ -69,7 +83,7 @@ class Uploader {
 
                         let dv = new DataView(packet.data.buffer);
                         dv.setUint32(0, index * 256, true);
-                        packet.data.set(file.slice(offset, offset + 256), 4);
+                        packet.data.set(out_file.slice(offset, offset + 256), 4);
 
                         DEBUG && console.log('[UPLOAD] upload - sending packet:', index);
                         self.sendPacket(packet, sbProg)
@@ -393,6 +407,61 @@ class Uploader {
                     reject(error);
                 });
         });
+    }
+
+    private createLboHeader(config: IConfig, codeLength: number): Uint8Array {
+        var meta = deviceSelector.selectedDevice().meta;
+        var header = new Uint8Array(LBO_HEADER_SIZE);
+        var dv = new DataView(header.buffer);
+
+        // set the sys code of the currently selected device
+        dv.setUint16(0, meta.sysCode, true);
+        // set the size of the LBO header
+        dv.setUint8(2, LBO_HEADER_SIZE);
+        // set the LED-Basic version
+        dv.setUint8(3, meta.basver || 0x0F);
+        // set the size of the code
+        dv.setUint16(4, codeLength, true);
+        // set the max number of LEDs. If a device has a fixed number of LEDs - use
+        // this value, otherwise check the config line from the code or finally a default value
+        let ledcnt: number;
+        if (meta.ledcnt !== undefined) {
+            ledcnt = meta.ledcnt;
+        } else if (config.ledcnt !== undefined) {
+            ledcnt = config.ledcnt;
+        } else if (meta.default_ledcnt !== undefined) {
+            ledcnt = meta.default_ledcnt;
+        } else {
+            ledcnt = 255;
+        }
+        dv.setUint16(6, ledcnt, true);
+        // set the colour order
+        dv.setUint8(8, meta.colour_order || config.colour_order || COLOUR_ORDER.GRB); // colour order RGB / GRB
+        // calculate and set cfg bits
+        var cfg = 0x00;
+        if (config.gprint === true || config.gprint === undefined) {
+            cfg |= 0x02;
+        }
+        if (config.white) {
+            cfg |= 0x01;
+        }
+        if (config.sys_led === undefined) {
+            config.sys_led = 3;
+        }
+        if (config.sys_led) {
+            cfg |= (config.sys_led << 2);
+        }
+        dv.setUint8(9, meta.cfg || cfg);
+        // set the frame rate
+        dv.setUint8(10, config.frame_rate || 25);
+        // set the master brightness
+        dv.setUint8(11, meta.mbr || config.mbr || 100);
+        // set the led type specific to the device
+        dv.setUint8(12, meta.led_type || config.led_type || 0);
+        // set the SPI rate for the APA102 compatible LEDs
+        dv.setUint8(13, meta.spi_rate || config.spi_rate || 4);
+
+        return header;
     }
 
     dispose() {

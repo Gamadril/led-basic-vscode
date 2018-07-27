@@ -9,7 +9,7 @@ import { COLOUR_ORDER } from './Device';
 interface IJumpTable { [label: string]: number; }
 interface IOperationList { [op: string]: number; }
 
-interface IParseResult {
+export interface IParseResult {
     success: boolean,
     code: Uint8Array,
     config: IConfig

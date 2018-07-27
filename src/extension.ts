@@ -8,11 +8,10 @@ import { LEDBasicSignatureHelpProvider } from './LEDBasicSignatureHelpProvider';
 import { LEDBasicCodeValidator } from './LEDBasicCodeValidator';
 import { LEDBasicDefinitionProvider } from './LEDBasicDefinitionProvider';
 import { LEDBasicReferenceProvider } from './LEDBasicReferenceProvider';
-import { COLOUR_ORDER } from './Device';
 import { portSelector } from './PortSelector';
 import { uploader } from './Uploader';
 import { deviceSelector } from './DeviceSelector';
-import { ledBasicParser, IConfig } from './LEDBasicParser';
+import { ledBasicParser } from './LEDBasicParser';
 import { output } from './OutputChannel';
 import { LEDBasicDocumentFormatter } from './LEDBasicDocumentFormatter';
 import { terminal, TERM_STATE } from './Terminal';
@@ -20,7 +19,6 @@ import { LEDBasicDocumentSymbolProvider } from './LEDBasicDocumentSymbolProvider
 
 //const LED_BASIC: vscode.DocumentFilter = { language: 'led_basic', scheme: 'file' };
 const LED_BASIC = 'led_basic'; // allow all documents, from disk and unsaved. extension code does not rely on file existence 
-const LBO_HEADER_SIZE = 16;
 
 let diagnosticCollection: vscode.DiagnosticCollection;
 
@@ -113,6 +111,7 @@ export function activate(ctx: vscode.ExtensionContext) {
         if (!editor || editor.document.languageId !== "led_basic") {
             return;
         }
+        let doc = editor.document;
 
         output.clear();
 
@@ -149,10 +148,7 @@ export function activate(ctx: vscode.ExtensionContext) {
                 return output.logInfo('Starting code validation...');
             })
             .then(() => {
-                if (!editor) { // make TS happy
-                    throw new Error('Unexpected error.');
-                }
-                if (!codeValidator.validateNow(editor.document)) {
+                if (!codeValidator.validateNow(doc)) {
                     vscode.commands.executeCommand("workbench.action.problems.focus");
                     //vscode.window.showWarningMessage('There are syntax errors in your code.');
                     throw new Error('Errors in code detected');
@@ -163,10 +159,7 @@ export function activate(ctx: vscode.ExtensionContext) {
                 return output.logInfo('Starting code tokenizer...');
             })
             .then(() => {
-                if (!editor) { // make TS happy
-                    throw new Error('Unexpected error.');
-                }
-                let result = ledBasicParser.build(editor.document.getText());
+                let result = ledBasicParser.build(doc.getText());
                 if (!result) {
                     vscode.commands.executeCommand("workbench.action.problems.focus");
                     //vscode.window.showWarningMessage('There are syntax errors in your code.');
@@ -177,15 +170,8 @@ export function activate(ctx: vscode.ExtensionContext) {
                 return result;
             })
             .then((result) => {
-                // TODO move header generation to uploader
-                let lbo = new Uint8Array(result.code.length + LBO_HEADER_SIZE);
-                let header = createLboHeader(result.config, result.code.length);
-
-                lbo.set(header, 0);
-                lbo.set(result.code, LBO_HEADER_SIZE);
-
                 output.logInfo('Starting code upload...');
-                return uploader.upload(lbo);
+                return uploader.upload(result);
             })
             .then(() => {
                 isUploading = false;
@@ -247,59 +233,4 @@ export function activate(ctx: vscode.ExtensionContext) {
     vscode.workspace.onDidOpenTextDocument(doc => {
         codeValidator.validate(doc);
     }, null, ctx.subscriptions);
-}
-
-function createLboHeader(config: IConfig, codeLength: number): Uint8Array {
-    var meta = deviceSelector.selectedDevice().meta;
-    var header = new Uint8Array(LBO_HEADER_SIZE);
-    var dv = new DataView(header.buffer);
-
-    // set the sys code of the currently selected device
-    dv.setUint16(0, meta.sysCode, true);
-    // set the size of the LBO header
-    dv.setUint8(2, LBO_HEADER_SIZE);
-    // set the LED-Basic version
-    dv.setUint8(3, meta.basver || 0x0F);
-    // set the size of the code
-    dv.setUint16(4, codeLength, true);
-    // set the max number of LEDs. If a device has a fixed number of LEDs - use
-    // this value, otherwise check the config line from the code or finally a default value
-    let ledcnt: number;
-    if (meta.ledcnt !== undefined) {
-        ledcnt = meta.ledcnt;
-    } else if (config.ledcnt !== undefined) {
-        ledcnt = config.ledcnt;
-    } else if (meta.default_ledcnt !== undefined) {
-        ledcnt = meta.default_ledcnt;
-    } else {
-        ledcnt = 255;
-    }
-    dv.setUint16(6, ledcnt, true);
-    // set the colour order
-    dv.setUint8(8, meta.colour_order || config.colour_order || COLOUR_ORDER.GRB); // colour order RGB / GRB
-    // calculate and set cfg bits
-    var cfg = 0x00;
-    if (config.gprint === true || config.gprint === undefined) {
-        cfg |= 0x02;
-    }
-    if (config.white) {
-        cfg |= 0x01;
-    }
-    if (config.sys_led === undefined) {
-        config.sys_led = 3;
-    }
-    if (config.sys_led) {
-        cfg |= (config.sys_led << 2);
-    }
-    dv.setUint8(9, meta.cfg || cfg);
-    // set the frame rate
-    dv.setUint8(10, config.frame_rate || 25);
-    // set the master brightness
-    dv.setUint8(11, meta.mbr || config.mbr || 100);
-    // set the led type specific to the device
-    dv.setUint8(12, meta.led_type || config.led_type || 0);
-    // set the SPI rate for the APA102 compatible LEDs
-    dv.setUint8(13, meta.spi_rate || config.spi_rate || 4);
-
-    return header;
 }

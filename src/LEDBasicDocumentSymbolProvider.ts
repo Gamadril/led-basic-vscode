@@ -12,7 +12,7 @@ export class LEDBasicDocumentSymbolProvider implements DocumentSymbolProvider {
         const regCommentLine = '^\'([^\r\n]+)\r?\n';
 
         // check for method labels
-        reg = new RegExp('(?:' + regCommentLine + ')?[^\'\r\n0-9]*([0-9]+:)(?!\\s*data)', 'igm');
+        reg = new RegExp('(?:' + regCommentLine + ')?^[^\'\r\n0-9]*([0-9]+:)(?!\\s*data)', 'igm');
 
         while (match = reg.exec(code)) {
             let index = match.index + match[0].indexOf(match[2]);

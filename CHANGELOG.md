@@ -1,5 +1,9 @@
 # LED Basic extension changelog
 
+## 1.1.2 - 25.08.2018
+- Added LED-Tube-Clock device
+- Bugfix for the Outline View preventing detection of labels in comment lines
+
 ## 1.1.1 - 10.07.2018
 - LED Basic v15.1.15 (however only available devices supported)
 - Added Outline View support showing labels with corresponding comment line above the label (if present)
