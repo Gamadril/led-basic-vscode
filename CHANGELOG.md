@@ -1,6 +1,9 @@
 # LED Basic extension changelog
 
-## 1.1.2 - 25.08.2018
+## 1.1.3 - 14.08.2018
+- Rebuild of the serial port library was required for VSCode 1.26.0
+
+## 1.1.2 - 25.07.2018
 - Added LED-Tube-Clock device
 - Bugfix for the Outline View preventing detection of labels in comment lines
 
