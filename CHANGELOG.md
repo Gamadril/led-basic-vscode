@@ -1,5 +1,8 @@
 # LED Basic extension changelog
 
+## 1.1.4 - 16.08.2018
+- Rebuild of the serial port library was required for macOS Mojave
+
 ## 1.1.3 - 14.08.2018
 - Rebuild of the serial port library was required for VSCode 1.26.0
 

@@ -60,7 +60,7 @@ static kern_return_t FindModems(io_iterator_t *matchingServices) {
   classesToMatch = IOServiceMatching(kIOSerialBSDServiceValue);
   if (classesToMatch != NULL) {
     CFDictionarySetValue(classesToMatch, CFSTR(kIOSerialBSDTypeKey),
-                         CFSTR(kIOSerialBSDModemType));
+                         CFSTR(kIOSerialBSDAllTypes));
   }
 
   kernResult = IOServiceGetMatchingServices(kIOMasterPortDefault,
@@ -322,22 +322,25 @@ void EIO_List(uv_work_t *req) {
 
     for (int i = 0, len = *(devices->length); i < len; i++) {
       stSerialDevice device = (*next).value;
-
-      ListResultItem *resultItem = new ListResultItem();
-      resultItem->comName = device.port;
-      resultItem->vendorId = device.vendorId;
-      resultItem->productId = device.productId;
-      resultItem->bcdDevice = device.bcdDevice;
-      if (*device.manufacturer) {
-        resultItem->manufacturer = device.manufacturer;
+      
+      // get only blp devices
+      if (device.vendorId == 0x16c0) {
+        ListResultItem *resultItem = new ListResultItem();
+        resultItem->comName = device.port;
+        resultItem->vendorId = device.vendorId;
+        resultItem->productId = device.productId;
+        resultItem->bcdDevice = device.bcdDevice;
+        if (*device.manufacturer) {
+          resultItem->manufacturer = device.manufacturer;
+        }
+        if (*device.serialNumber) {
+          resultItem->serialNumber = device.serialNumber;
+        }
+        if (*device.deviceName) {
+          resultItem->deviceName = device.deviceName;
+        }
+        data->results.push_back(resultItem);
       }
-      if (*device.serialNumber) {
-        resultItem->serialNumber = device.serialNumber;
-      }
-      if (*device.deviceName) {
-        resultItem->deviceName = device.deviceName;
-      }
-      data->results.push_back(resultItem);
 
       stDeviceListItem *current = next;
 
