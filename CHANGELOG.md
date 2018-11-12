@@ -1,5 +1,8 @@
 # LED Basic extension changelog
 
+## 1.1.5 - 12.11.2018
+- Removed Terminal implementation and replaced with simple output to debug view. Waiting for TerminalRenderer to become official API
+
 ## 1.1.4 - 16.08.2018
 - Rebuild of the serial port library was required for macOS Mojave
 

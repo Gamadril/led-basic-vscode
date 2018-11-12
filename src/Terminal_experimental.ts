@@ -2,7 +2,7 @@
 
 import { SerialPort } from "./SerialPort";
 import { portSelector } from "./PortSelector";
-import { StatusBarItem, window, StatusBarAlignment, debug } from "vscode";
+import { StatusBarItem, window, StatusBarAlignment, TerminalRenderer } from "vscode";
 
 /**
  * Terminal state
@@ -13,6 +13,7 @@ export enum TERM_STATE {
     DISABLED
 };
 
+const TERMINAL_NAME = 'LED Basic Terminal';
 const REG_ERROR = new RegExp('\\?ERROR ([0-9]+) IN LINE ([0-9]+)');
 
 const ERROR_MAP: { [s: string]: string; } = {
@@ -32,14 +33,19 @@ class Terminal {
     private _state: TERM_STATE = TERM_STATE.DISABLED;
     private _statusBarItem: StatusBarItem;
     private _port: SerialPort | null = null;
-    private _deviceName: string;
+    private _shell: TerminalRenderer | null = null;
 
     constructor() {
         this._statusBarItem = window.createStatusBarItem(StatusBarAlignment.Left, 2);
         this._statusBarItem.command = 'led_basic.terminal';
         this._statusBarItem.show();
-        this._deviceName = '';
         this.update();
+
+        window.onDidCloseTerminal((terminal) => {
+            if (terminal.name === TERMINAL_NAME) {
+                this.stop();
+            }
+        });
     }
 
     start(): Promise<void> {
@@ -58,18 +64,28 @@ class Terminal {
                 reject(new Error('Serial port not selected.'));
                 return;
             }
-            this._deviceName = selectedPort.deviceName;
+            let deviceName = selectedPort.deviceName;
 
             this._port = new SerialPort(selectedPort.name);
             this._port.open()
                 .then(() => {
-                    debug.activeDebugConsole.appendLine('\x1b[32mConnected to LED Basic device: \x1b[36m' + this._deviceName + '\x1b[0m\n');
+                    debugger;
+                    if (this._shell === null) {
+                        this._shell = window.createTerminalRenderer(TERMINAL_NAME);
+                    }
+
+                    this._shell.write('\x1b[32mConnected to LED Basic device: \x1b[36m' + deviceName + '\x1b[0m\r\n\r\n');
+                    this._shell.terminal.show();
 
                     if (this._port) {
                         this._port.setReadListener(data => {
+                            if (!this._shell) {
+                                return;
+                            }
+
                             let msg = String.fromCharCode.apply(null, data);
                             if (msg.startsWith('?ERROR')) {
-                                debug.activeDebugConsole.appendLine('\x1b[31m' + msg + '\x1b[0m');
+                                this._shell.write('\x1b[31m' + msg + '\x1b[0m');
 
                                 let match = REG_ERROR.exec(msg);
                                 if (match) {
@@ -79,8 +95,9 @@ class Terminal {
                                     }
                                 }
                             } else {
-                                debug.activeDebugConsole.appendLine(msg);
+                                this._shell.write(msg);
                             }
+                            this._shell.write('\r\n');
                         });
                     }
                     this._state = TERM_STATE.CONNECTED;
@@ -95,9 +112,12 @@ class Terminal {
         if (!this._port || !this._port.isOpen() || this._state !== TERM_STATE.CONNECTED) {
             return Promise.resolve();
         } else {
+            if (this._shell) {
+                this._shell.terminal.dispose();
+                this._shell = null;
+            }
             this._state = TERM_STATE.DISCONNECTED;
             this.update();
-            debug.activeDebugConsole.appendLine('\x1b[32mDisconnected from \x1b[36m' + this._deviceName + '\x1b[0m\n');
             return this._port.close();
         }
     }
