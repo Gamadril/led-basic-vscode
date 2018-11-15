@@ -1,5 +1,5 @@
-import ohm = require('ohm-js')
-import fs = require('fs');
+import * as ohm from "ohm-js";
+import * as fs from "fs";
 import { getExtensionPath } from "./utils";
 
 import { DocumentFormattingEditProvider, TextDocument, FormattingOptions, CancellationToken, TextEdit } from "vscode";

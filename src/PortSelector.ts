@@ -1,7 +1,8 @@
 'use strict';
 
 import { StatusBarAlignment, window, StatusBarItem, QuickPickItem } from 'vscode';
-import { SerialPort, ISerialPortInfo } from './SerialPort';
+import { SerialPort } from './SerialPort';
+import { ISerialPortInfo } from './Common';
 
 class PortSelector {
     private _statusBarItem: StatusBarItem;

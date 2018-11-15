@@ -9,13 +9,14 @@ import { LEDBasicCodeValidator } from './LEDBasicCodeValidator';
 import { LEDBasicDefinitionProvider } from './LEDBasicDefinitionProvider';
 import { LEDBasicReferenceProvider } from './LEDBasicReferenceProvider';
 import { portSelector } from './PortSelector';
-import { uploader } from './Uploader';
+import { Uploader } from './Uploader';
 import { deviceSelector } from './DeviceSelector';
-import { ledBasicParser } from './LEDBasicParser';
+import { LEDBasicParserFactory } from './LEDBasicParserFactory';
 import { output } from './OutputChannel';
 import { LEDBasicDocumentFormatter } from './LEDBasicDocumentFormatter';
 import { terminal, TERM_STATE } from './Terminal';
 import { LEDBasicDocumentSymbolProvider } from './LEDBasicDocumentSymbolProvider';
+import { SerialPort } from './SerialPort';
 
 //const LED_BASIC: vscode.DocumentFilter = { language: 'led_basic', scheme: 'file' };
 const LED_BASIC = 'led_basic'; // allow all documents, from disk and unsaved. extension code does not rely on file existence 
@@ -102,9 +103,16 @@ export function activate(ctx: vscode.ExtensionContext) {
         if (terminal.state === TERM_STATE.CONNECTED) {
             terminal.stop();
         } else if (terminal.state === TERM_STATE.DISCONNECTED) {
-            terminal.start();
+            terminal.start().catch(error => {
+                output.logError(error);
+            });
         }
     });
+
+    const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
+    statusBarItem.command = 'led_basic.upload';
+    statusBarItem.text = '$(triangle-right) Upload';
+    statusBarItem.show();
 
     const uploadCmd = vscode.commands.registerCommand('led_basic.upload', () => {
         let editor = vscode.window.activeTextEditor;
@@ -159,7 +167,7 @@ export function activate(ctx: vscode.ExtensionContext) {
                 return output.logInfo('Starting code tokenizer...');
             })
             .then(() => {
-                let result = ledBasicParser.build(doc.getText());
+                let result = LEDBasicParserFactory.getParser().build(doc.getText());
                 if (!result) {
                     vscode.commands.executeCommand("workbench.action.problems.focus");
                     //vscode.window.showWarningMessage('There are syntax errors in your code.');
@@ -171,6 +179,16 @@ export function activate(ctx: vscode.ExtensionContext) {
             })
             .then((result) => {
                 output.logInfo('Starting code upload...');
+                let selectedPort = portSelector.selectedPort();
+                let selectedDevice = deviceSelector.selectedDevice();
+                if (!selectedPort) {
+                    throw new Error('Serial port not selected');
+                }
+                let uploader = new Uploader(selectedPort, selectedDevice, {
+                    createSerialPort: (name, options) => {
+                        return new SerialPort(name, options);
+                    }
+                });
                 return uploader.upload(result);
             })
             .then(() => {
@@ -221,10 +239,10 @@ export function activate(ctx: vscode.ExtensionContext) {
     ctx.subscriptions.push(deviceSelectCmd);
     ctx.subscriptions.push(portSelector);
     ctx.subscriptions.push(portSelectCmd);
-    ctx.subscriptions.push(uploader);
     ctx.subscriptions.push(uploadCmd);
     ctx.subscriptions.push(terminal);
     ctx.subscriptions.push(terminalCmd);
+    ctx.subscriptions.push(statusBarItem);
 
     vscode.workspace.onDidChangeTextDocument(e => {
         codeValidator.validate(e.document);

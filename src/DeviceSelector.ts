@@ -1,7 +1,8 @@
 'use strict';
 
 import { StatusBarAlignment, window, StatusBarItem } from 'vscode';
-import { Device, COLOUR_ORDER, ICommand } from './Device';
+import { Device } from './Device';
+import { COLOUR_ORDER, ICommand } from './Common';
 
 const CMD_LED_BASIC = [dev('setled', 2), dev('setall', 1)];
 const CMD_LED_PWM = [dev('show'), dev('lrgb', 4), dev('lhsv', 4), dev('irgb', 4), dev('ihsv', 4), dev('iled', 2), dev('iall', 1), dev('irange', 3), dev('rainbow', 6), dev('copy', 2), dev('repeat', 3), dev('shift', 3), dev('mirror', 3), dev('blackout')];
@@ -13,14 +14,14 @@ const CMD_IO_IR = [dev('getir')];
 const CMD_IO_PORT_CLR = [dev('setport', 1), dev('clrport', 1)];
 const CMD_IO_PORT = CMD_IO_PORT_CLR.concat([dev('setport', 1)]);
 const CMD_IO_POTI = [dev('getpoti', 1)];
-//const CMD_IO_ADC = [dev('getadc', 1)];
+const CMD_IO_ADC = [dev('getadc', 1)];
 const CMD_IO_TEMP = [dev('gettemp')];
 const CMD_IO_XTEMP = [dev('xtempcnt'), dev('xtempval', 2)];
 const CMD_IO_SOUND = [dev('beep', 1)];
 const CMD_IO_ENC = [dev('getenc'), dev('setenc', 3)];
 const CMD_IO_EEP = [dev('eeread', 1), dev('eewrite', 2)];
 const CMD_IO_SYS = [dev('sys', 2)];
-const CMD_LED_SEG = [dev('clear'), dev('pchar', 2), dev('achar', 4), dev('praw', 2), dev('araw', 4), dev('adp', 1), dev('phex', 3), dev('pdez', 4)];
+const CMD_LED_SEG = [dev('clear'), dev('pchar', 2), dev('achar', 4), dev('praw', 2), dev('araw', 4), dev('adp', 1), dev('phex', 3), dev('pdez', 4), dev('update')];
 
 /**
  * List of known/supported devices
@@ -144,14 +145,20 @@ const DEVICES: Device[] = [
         }
     },
     {
-        label: 'Touch-Stick (Nano)',
-        detail: 'Tiny USB-Stick with 5 PWM LEDs and 2 touch buttons.',
-        commands: CMD_LED_PWM.concat(CMD_IO_KEY).concat(CMD_IO_EEP).concat(CMD_IO_SYS),
+        label: 'RC-Box',
+        detail: 'Module with RF remote control support.',
+        commands: CMD_LED_PWM.concat(CMD_IO_KEY).concat(CMD_IO_PORT).concat(CMD_IO_ADC).concat(CMD_IO_IR).concat(CMD_IO_EEP),
         meta: {
-            sysCode: 0x3260,
-            ledcnt: 5,
-            colour_order: COLOUR_ORDER.RGB,
-            cfg: 0x0E
+            sysCode: 0x3240
+        }
+    },
+    {
+        label: 'Touch-Lamp',
+        detail: 'Baseboard for a LED lamp.',
+        commands: CMD_LED_PWM.concat(CMD_IO_KEY).concat(CMD_IO_PORT).concat(CMD_IO_IR).concat(CMD_IO_EEP),
+        meta: {
+            sysCode: 0x3270,
+            ledcnt: 8
         }
     },
     {
@@ -161,6 +168,22 @@ const DEVICES: Device[] = [
         meta: {
             sysCode: 0x3300,
             ledcnt: 0
+        }
+    },
+    {
+        label: 'NixieCron - Cronios 2',
+        detail: 'Imporved basis module for LED clocks',
+        commands: CMD_LED_PWM.concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_LDR).concat(CMD_IO_SOUND).concat(CMD_IO_ENC).concat(CMD_IO_EEP).concat(CMD_IO_SYS),
+        meta: {
+            sysCode: 0x3350
+        }
+    },
+    {
+        label: 'NixieCron - LED-Nixie-M4',
+        detail: 'LED clock module with support of 4 digits',
+        commands: CMD_LED_PWM.concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_LDR).concat(CMD_IO_SOUND).concat(CMD_IO_ENC).concat(CMD_IO_EEP).concat(CMD_IO_SYS),
+        meta: {
+            sysCode: 0x3320
         }
     }
 ];

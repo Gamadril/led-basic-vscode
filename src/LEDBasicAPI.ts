@@ -316,6 +316,11 @@ export const API: ILibEntries = {
                 name: "lzero",
                 description: "Show leading zeros. 0 = no, 1 = yes"
             }]
+        },
+        'update': {
+            signature: "LED.update()",
+            description: "Updates the current state on 7-segment displays. This command should be only called after change of the display content.",
+            parameters: []
         }
     },
     'IO': {

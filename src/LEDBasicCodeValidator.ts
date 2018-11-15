@@ -2,7 +2,16 @@
 
 import { DiagnosticCollection, Diagnostic, DiagnosticSeverity, Range, TextDocument, Position } from "vscode";
 import { deviceSelector } from "./DeviceSelector";
-import { ledBasicParser, IError } from "./LEDBasicParser";
+import { LEDBasicParserFactory } from "./LEDBasicParserFactory";
+import { IError, IRange } from "./Common";
+
+function IRange2Range(range: IRange) {
+    let result : Range = new Range(
+        new Position(range.start.line, range.start.character),
+        new Position(range.end.line, range.end.character)
+    );
+    return result;
+}
 
 export class LEDBasicCodeValidator {
     private _runner: NodeJS.Timer | null = null;
@@ -60,17 +69,18 @@ export class LEDBasicCodeValidator {
         this._diagnosticCollection.clear();
 
         let sourceCode = doc.getText();
-        let matchResult = ledBasicParser.match(sourceCode);
+        let parser = LEDBasicParserFactory.getParser();
+        let matchResult = parser.match(sourceCode);
 
         if (!matchResult.success && matchResult.errors) {
             let diagnostics = matchResult.errors.map((error: IError) => {
-                return new Diagnostic(error.range, error.message, DiagnosticSeverity.Error)
+                return new Diagnostic(IRange2Range(error.range), error.message, DiagnosticSeverity.Error)
             });
             this._diagnosticCollection.set(doc.uri, diagnostics);
             return false;
         } else {
             try {
-                matchResult = ledBasicParser.match(sourceCode);
+                matchResult = parser.match(sourceCode);
             } catch (e) {
                 console.log(e);
             }
@@ -79,7 +89,7 @@ export class LEDBasicCodeValidator {
 
             if (!matchResult.success && matchResult.errors) {
                 diagnostics.concat(matchResult.errors.map((error: IError) => {
-                    return new Diagnostic(error.range, error.message, DiagnosticSeverity.Error)
+                    return new Diagnostic(IRange2Range(error.range), error.message, DiagnosticSeverity.Error)
                 }));
             }
 

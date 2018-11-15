@@ -4,18 +4,11 @@ const SP = require("../blp-serial");
 
 import { Disposable } from 'vscode';
 import { dump } from './utils';
-
-interface ISerialPortOptions { baudRate: number, autoOpen?: boolean, parity?: string, hupcl?: boolean }
-export interface ISerialPortInfo {
-    name: string,
-    serialNumber: string,
-    deviceName: string,
-    sysCode: number
-}
+import { ISerialPortOptions, ISerialPort, ISerialPortInfo } from './Common';
 
 const DEBUG = false;
 
-export class SerialPort implements Disposable {
+export class SerialPort implements ISerialPort, Disposable {
     private _dataTimeout: number = 0;
     private _dataTimeoutId: NodeJS.Timer | null = null;
     private _readCallTimerId: NodeJS.Timer | null = null;

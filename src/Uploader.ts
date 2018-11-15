@@ -1,12 +1,7 @@
 'use strict';
 
-import { SerialPort } from "./SerialPort";
-import { StatusBarItem, window, StatusBarAlignment } from "vscode";
-import { portSelector } from "./PortSelector";
-import { deviceSelector } from "./DeviceSelector";
-import { IParseResult, IConfig } from "./LEDBasicParser";
-import { COLOUR_ORDER } from "./Device";
-//import { dump } from "./utils";
+import { IParseResult, IConfig, COLOUR_ORDER, IDevice, ISerialPortInfo, ISerialPortFactory, ISerialPort } from "./Common";
+import { dump } from "./utils";
 
 interface IDataPacket {
     cmd: CMD;
@@ -30,16 +25,17 @@ enum CMD {
 
 const DEBUG = false;
 
-class Uploader {
-    private _statusBarItem: StatusBarItem;
-    private _port!: SerialPort;
+export class Uploader {
+    private _portInfo: ISerialPortInfo;
+    private _device: IDevice;
     private _seqNr: number = 1;
+    private _portFactory: ISerialPortFactory;
+    private _port!: ISerialPort;
 
-    constructor() {
-        this._statusBarItem = window.createStatusBarItem(StatusBarAlignment.Left, 0);
-        this._statusBarItem.command = 'led_basic.upload';
-        this._statusBarItem.text = '$(triangle-right) Upload';
-        this._statusBarItem.show();
+    constructor(portInfo: ISerialPortInfo, device: IDevice, portFactory: ISerialPortFactory) {
+        this._portInfo = portInfo;
+        this._device = device;
+        this._portFactory = portFactory;
     }
 
     upload(file: Uint8Array | IParseResult): Promise<void> {
@@ -57,7 +53,7 @@ class Uploader {
         }
 
         return new Promise((resolve, reject) => {
-            //console.log(dump(file));
+            console.log(dump(out_file));
             this.initPort()
                 .then(isProg => {
                     DEBUG && console.log('[UPLOAD] opening port for upload. SB-PROG: ', isProg);
@@ -185,20 +181,7 @@ class Uploader {
                 return;
             }
 
-            let selectedPort = portSelector.selectedPort();
-            let selectedDevice = deviceSelector.selectedDevice();
-
-            if (!selectedPort) {
-                reject(new Error('Serial port not selected.'));
-                return;
-            }
-
-            if (!selectedDevice) {
-                reject(new Error('Target device not selected.'));
-                return;
-            }
-
-            let port = new SerialPort(selectedPort.name, {
+            let port = this._portFactory.createSerialPort(this._portInfo.name, {
                 baudRate: baud
             });
 
@@ -211,7 +194,7 @@ class Uploader {
                     DEBUG && console.log('[UPLOAD] switchProgMode - port closed. resolving');
                     resolve();
                 })
-                .catch(error => {
+                .catch((error: any) => {
                     DEBUG && console.log('[UPLOAD] switchProgMode - error detected: ' + error.message);
                     reject(error);
                 });
@@ -221,25 +204,13 @@ class Uploader {
     private getProgDeviceInfo(): Promise<any> {
         return new Promise((resolve, reject) => {
             DEBUG && console.log('[UPLOAD] getProgDeviceInfo - enter');
-            let selectedPort = portSelector.selectedPort();
-            let selectedDevice = deviceSelector.selectedDevice();
-
-            if (!selectedPort) {
-                reject(new Error('Serial port not selected.'));
-                return;
-            }
-
-            if (!selectedDevice) {
-                reject(new Error('Target device not selected.'));
-                return;
-            }
 
             if (this._port && this._port.isOpen()) {
                 reject(new Error('Error getting device info - port already opened'));
                 return;
             }
 
-            this._port = new SerialPort(selectedPort.name, {
+            this._port = this._portFactory.createSerialPort(this._portInfo.name, {
                 baudRate: PROG_BAUD,
                 parity: 'even'
             });
@@ -273,18 +244,6 @@ class Uploader {
     private initPort(): Promise<boolean> {
         return new Promise((resolve, reject) => {
             DEBUG && console.log('[UPLOAD] initPort');
-            let selectedPort = portSelector.selectedPort();
-            let selectedDevice = deviceSelector.selectedDevice();
-
-            if (!selectedPort) {
-                reject(new Error('Serial port not selected.'));
-                return;
-            }
-
-            if (!selectedDevice) {
-                reject(new Error('Target device not selected.'));
-                return;
-            }
 
             if (this._port && this._port.isOpen()) {
                 DEBUG && console.log('[UPLOAD] initPort - port exists and open, closing');
@@ -292,19 +251,18 @@ class Uploader {
                 return;
             }
 
-            let serport = selectedPort.name;
-            if (selectedPort.sysCode === 0x4470) {
+            if (this._portInfo.sysCode === 0x4470) {
                 // PROG-SB, get the info about connected device
                 this.switchProgMode(ProgMode.PROG_MODE_BL, true, false)
                     .then(() => {
                         return this.getProgDeviceInfo();
                     })
                     .then(deviceInfo => {
-                        if (selectedDevice.meta.sysCode !== deviceInfo.sysCode) {
+                        if (this._device.meta.sysCode !== deviceInfo.sysCode) {
                             throw new Error('Selected device does not match the connected device.');
                         }
                         DEBUG && console.log('[UPLOAD] initPort - device match. Creating new port');
-                        this._port = new SerialPort(serport, {
+                        this._port = this._portFactory.createSerialPort(this._portInfo.name, {
                             baudRate: PROG_BAUD,
                             parity: 'even'
                         });
@@ -328,12 +286,12 @@ class Uploader {
                                 });
                         }
                     });
-            } else if (selectedDevice.meta.sysCode !== selectedPort.sysCode) {
+            } else if (this._device.meta.sysCode !== this._portInfo.sysCode) {
                 reject(new Error('Selected device does not match the connected device.'));
             } else {
                 DEBUG && console.log('[UPLOAD] initPort - creating new port');
-                this._port = new SerialPort(selectedPort.name, {
-                    baudRate: 0x100000 + selectedDevice.meta.sysCode
+                this._port = this._portFactory.createSerialPort(this._portInfo.name, {
+                    baudRate: 0x100000 + this._device.meta.sysCode
                 });
                 resolve(false);
             }
@@ -410,7 +368,7 @@ class Uploader {
     }
 
     private createLboHeader(config: IConfig, codeLength: number): Uint8Array {
-        var meta = deviceSelector.selectedDevice().meta;
+        var meta = this._device.meta;
         var header = new Uint8Array(LBO_HEADER_SIZE);
         var dv = new DataView(header.buffer);
 
@@ -465,11 +423,8 @@ class Uploader {
     }
 
     dispose() {
-        this._statusBarItem.dispose();
         if (this._port) {
             this._port.dispose();
         }
     }
 }
-
-export const uploader = new Uploader();
