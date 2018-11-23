@@ -2,7 +2,7 @@
 
 import { StatusBarAlignment, window, StatusBarItem } from 'vscode';
 import { Device } from './Device';
-import { COLOUR_ORDER, ICommand } from './Common';
+import { ICommand } from './Common';
 
 const CMD_LED_BASIC = [dev('setled', 2), dev('setall', 1)];
 const CMD_LED_PWM = [dev('show'), dev('lrgb', 4), dev('lhsv', 4), dev('irgb', 4), dev('ihsv', 4), dev('iled', 2), dev('iall', 1), dev('irange', 3), dev('rainbow', 6), dev('copy', 2), dev('repeat', 3), dev('shift', 3), dev('mirror', 3), dev('blackout')];
