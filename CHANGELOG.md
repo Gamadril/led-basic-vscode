@@ -1,5 +1,8 @@
 # LED Basic extension changelog
 
+## 1.2.0 - 23.11.2018
+- updated list of components and commands to match LED Basic v15.2.1
+
 ## 1.1.6 - 12.11.2018
 - Removed Terminal implementation and replaced with simple output to debug view. Waiting for TerminalRenderer to become official API
 
