@@ -293,7 +293,7 @@ export const API: ILibEntries = {
         },
         'araw': {
             signature: "LED.araw(raw1, raw2, raw3, raw4)",
-            description: "Outputs all 4 characters at the same time. Values of all 4 characters must be specified.",
+            description: "Outputs all 4 characters at the same time in raw mode. Values of all 4 characters must be specified.",
             parameters: [raw1, raw2, raw3, raw4]
         },
         'adp': {

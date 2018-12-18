@@ -1,5 +1,8 @@
 # LED Basic extension changelog
 
+## 1.2.1 - 18.12.2018
+- updated device support to LED Basic v15.2.2
+
 ## 1.2.0 - 23.11.2018
 - updated list of components and commands to match LED Basic v15.2.1
 

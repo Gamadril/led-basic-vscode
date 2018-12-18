@@ -11,7 +11,7 @@ const CMD_IO_KEY = [dev('waitkey'), dev('getkey'), dev('keystate')];
 const CMD_IO_RTC = [dev('getrtc', 1), dev('setrtc', 2)];
 const CMD_IO_LDR = [dev('getldr')];
 const CMD_IO_IR = [dev('getir')];
-const CMD_IO_PORT_CLR = [dev('setport', 1), dev('clrport', 1)];
+const CMD_IO_PORT_CLR = [dev('clrport', 1)];
 const CMD_IO_PORT = CMD_IO_PORT_CLR.concat([dev('setport', 1)]);
 const CMD_IO_POTI = [dev('getpoti', 1)];
 const CMD_IO_ADC = [dev('getadc', 1)];
@@ -184,6 +184,14 @@ const DEVICES: Device[] = [
         commands: CMD_LED_PWM.concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_LDR).concat(CMD_IO_SOUND).concat(CMD_IO_ENC).concat(CMD_IO_EEP).concat(CMD_IO_SYS),
         meta: {
             sysCode: 0x3320
+        }
+    },
+    {
+        label: 'LED-BASIC-PICO',
+        detail: 'Tiny breadboard friendly base module',
+        commands: CMD_LED_PWM.concat(CMD_LED_SEG).concat(CMD_IO_KEY).concat(CMD_IO_PORT).concat(CMD_IO_ADC).concat(CMD_IO_IR).concat(CMD_IO_ENC).concat(CMD_IO_TEMP).concat(CMD_IO_SOUND).concat(CMD_IO_EEP).concat(CMD_IO_RTC).concat(CMD_IO_SYS),
+        meta: {
+            sysCode: 0x3210
         }
     }
 ];
