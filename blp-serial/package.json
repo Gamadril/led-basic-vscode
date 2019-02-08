@@ -7,11 +7,11 @@
   "keywords": [],
   "license": "MIT",
   "scripts": {
-    "install": "node-gyp rebuild --target=2.0.7 --arch=x64 --dist-url=https://atom.io/download/electron"
+    "install": "node-gyp rebuild --target=3.1.2 --arch=x64 --dist-url=https://atom.io/download/electron"
   },
   "dependencies": {},
   "devDependencies": {
-    "nan": "^2.10.0",
-    "node-gyp": "^3.6.2"
+    "nan": "^2.12.1",
+    "node-gyp": "^3.8.0"
   }
 }

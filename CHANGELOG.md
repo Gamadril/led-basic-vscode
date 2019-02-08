@@ -1,5 +1,9 @@
 # LED Basic extension changelog
 
+## 1.2.2 - 08.02.2019
+- Rebuild of the serial port library was required for VSCode 1.31.0
+- Icon added
+
 ## 1.2.1 - 18.12.2018
 - updated device support to LED Basic v15.2.2
 

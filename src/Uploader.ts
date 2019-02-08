@@ -1,7 +1,7 @@
 'use strict';
 
 import { IParseResult, IConfig, COLOUR_ORDER, IDevice, ISerialPortInfo, ISerialPortFactory, ISerialPort } from "./Common";
-import { dump } from "./utils";
+//import { dump } from "./utils";
 
 interface IDataPacket {
     cmd: CMD;
@@ -53,7 +53,7 @@ export class Uploader {
         }
 
         return new Promise((resolve, reject) => {
-            console.log(dump(out_file));
+            //console.log(dump(out_file));
             this.initPort()
                 .then(isProg => {
                     DEBUG && console.log('[UPLOAD] opening port for upload. SB-PROG: ', isProg);
