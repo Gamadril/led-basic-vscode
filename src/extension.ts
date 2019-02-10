@@ -17,6 +17,7 @@ import { LEDBasicDocumentFormatter } from './LEDBasicDocumentFormatter';
 import { terminal, TERM_STATE } from './Terminal';
 import { LEDBasicDocumentSymbolProvider } from './LEDBasicDocumentSymbolProvider';
 import { SerialPort } from './SerialPort';
+import { decodeErrorMessage, parseResultToArray } from './Common';
 
 //const LED_BASIC: vscode.DocumentFilter = { language: 'led_basic', scheme: 'file' };
 const LED_BASIC = 'led_basic'; // allow all documents, from disk and unsaved. extension code does not rely on file existence 
@@ -48,6 +49,7 @@ export function activate(ctx: vscode.ExtensionContext) {
             }
         });
 
+    // device selection handler
     const deviceSelectCmd = vscode.commands.registerCommand('led_basic.device', () => {
         terminal.stop();
         deviceSelector.showSelection()
@@ -81,6 +83,7 @@ export function activate(ctx: vscode.ExtensionContext) {
             });
     });
 
+    // port selection handler
     const portSelectCmd = vscode.commands.registerCommand('led_basic.serialports', () => {
         terminal.stop();
         portSelector.showSelection()
@@ -99,6 +102,7 @@ export function activate(ctx: vscode.ExtensionContext) {
             });
     });
 
+    // terminal button handler
     const terminalCmd = vscode.commands.registerCommand('led_basic.terminal', () => {
         if (terminal.state === TERM_STATE.CONNECTED) {
             terminal.stop();
@@ -109,6 +113,7 @@ export function activate(ctx: vscode.ExtensionContext) {
         }
     });
 
+    // upload code handler 
     const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
     statusBarItem.command = 'led_basic.upload';
     statusBarItem.text = '$(triangle-right) Upload';
@@ -124,7 +129,7 @@ export function activate(ctx: vscode.ExtensionContext) {
         output.clear();
 
         if (isUploading) {
-            output.logInfo('Uplad already in progress');
+            output.logInfo('Upload already in progress');
             return;
         }
 
@@ -141,6 +146,7 @@ export function activate(ctx: vscode.ExtensionContext) {
             return;
         }
 
+        // check if selected target device does match the connected device. In the case of SB-Prog this check is done during upload
         if (selectedPort.sysCode !== 0x4470 && targetDevice.meta.sysCode !== selectedPort.sysCode) {
             output.logError('Selected device does not match the connected device.');
             output.logInfo('Target device: ' + targetDevice.label);
@@ -152,56 +158,57 @@ export function activate(ctx: vscode.ExtensionContext) {
 
         // async chain since VSC output channel logs seem to be blocking operations. Output appears only at the end of upload as whole text block.
         terminal.stop()
-            .then(() => {
-                return output.logInfo('Starting code validation...');
-            })
+            .then(() => output.logInfo('Starting code validation...'))
             .then(() => {
                 if (!codeValidator.validateNow(doc)) {
                     vscode.commands.executeCommand("workbench.action.problems.focus");
-                    //vscode.window.showWarningMessage('There are syntax errors in your code.');
                     throw new Error('Errors in code detected');
                 }
                 return output.logInfo('Code is valid');
             })
-            .then(() => {
-                return output.logInfo('Starting code tokenizer...');
-            })
+            .then(() => output.logInfo('Starting code tokenizer...'))
             .then(() => {
                 let result = LEDBasicParserFactory.getParser().build(doc.getText());
                 if (!result) {
                     vscode.commands.executeCommand("workbench.action.problems.focus");
-                    //vscode.window.showWarningMessage('There are syntax errors in your code.');
                     throw new Error('Invalid code detected');
                 }
-
-                output.logInfo('Code tokenized');
                 return result;
             })
-            .then((result) => {
+            .then(result => {
                 output.logInfo('Starting code upload...');
-                let selectedPort = portSelector.selectedPort();
-                let selectedDevice = deviceSelector.selectedDevice();
                 if (!selectedPort) {
                     throw new Error('Serial port not selected');
                 }
-                let uploader = new Uploader(selectedPort, selectedDevice, {
+                let uploader = new Uploader(selectedPort, targetDevice, {
                     createSerialPort: (name, options) => {
                         return new SerialPort(name, options);
                     }
                 });
-                return uploader.upload(result);
+                let file = parseResultToArray(result, targetDevice.meta);
+                return uploader.upload(file);
             })
-            .then(() => {
+            .then(error => {
                 isUploading = false;
                 output.logInfo('Upload done');
+                if (error) {
+                    let deviceError = decodeErrorMessage(error);
+                    if (deviceError) {
+                        output.logError('Device message: ' + deviceError.msg);
+                        let start = new vscode.Position(deviceError.line - 1, 0);
+                        let end = start;
+                        let diagnostic = new vscode.Diagnostic(new vscode.Range(start, end), deviceError.msg, vscode.DiagnosticSeverity.Error);
+                        diagnosticCollection.set(doc.uri, [diagnostic]);
+                    }
+                }
                 let config = vscode.workspace.getConfiguration('led_basic');
                 if (config && config.openTerminalAfterUpload) {
                     terminal.start();
                 }
             })
             .catch((err) => {
-                output.logError(err.message);
                 isUploading = false;
+                output.logError(err.message);
             });
     });
 

@@ -1,20 +1,15 @@
 'use strict';
 
-import { IParseResult, IConfig, COLOUR_ORDER, IDevice, ISerialPortInfo, ISerialPortFactory, ISerialPort } from "./Common";
-//import { dump } from "./utils";
+import { IDevice, ISerialPortInfo, ISerialPortFactory, ISerialPort, IDevUploader } from "./Common";
 
 interface IDataPacket {
     cmd: CMD;
     data: Uint8Array;
 }
 
-const LBO_HEADER_SIZE = 16;
 const PROG_BAUD = 38400;
-
-enum ProgMode {
-    PROG_MODE_TERMINAL,
-    PROG_MODE_BL
-}
+const SBPROG_SYSCODE = 0x4470;
+const ERROR_GET_TIMEOUT = 200;
 
 enum CMD {
     CMD_RESET = 0xF1,
@@ -26,317 +21,165 @@ enum CMD {
 const DEBUG = false;
 
 export class Uploader {
-    private _portInfo: ISerialPortInfo;
-    private _device: IDevice;
-    private _seqNr: number = 1;
-    private _portFactory: ISerialPortFactory;
-    private _port!: ISerialPort;
+    private _devUploader: IDevUploader;
 
     constructor(portInfo: ISerialPortInfo, device: IDevice, portFactory: ISerialPortFactory) {
-        this._portInfo = portInfo;
-        this._device = device;
-        this._portFactory = portFactory;
-    }
-
-    upload(file: Uint8Array | IParseResult): Promise<void> {
-        let sbProg = false;
-        this._seqNr = 1;
-        let out_file: Uint8Array;
-
-        if (file instanceof Uint8Array) {
-            out_file = file;
+        if (portInfo.sysCode === SBPROG_SYSCODE) {
+            this._devUploader = new SBProgUploader(portInfo, device, portFactory);
         } else {
-            out_file = new Uint8Array(file.code.length + LBO_HEADER_SIZE);
-            let header = this.createLboHeader(file.config, file.code.length);
-            out_file.set(header, 0);
-            out_file.set(file.code, LBO_HEADER_SIZE);
+            this._devUploader = new DeviceUploader(portInfo, device, portFactory);
         }
-
-        return new Promise((resolve, reject) => {
-            //console.log(dump(out_file));
-            this.initPort()
-                .then(isProg => {
-                    DEBUG && console.log('[UPLOAD] opening port for upload. SB-PROG: ', isProg);
-                    sbProg = isProg;
-                    if (sbProg) {
-                        return this.openProgUpload();
-                    } else {
-                        return this._port.openForUpload(true, false);
-                    }
-                })
-                .then(() => {
-                    let nrPackets = Math.trunc((out_file.length + 255) / 256);
-                    let index = 0;
-                    DEBUG && console.log('[UPLOAD] port opened. Sending total', nrPackets, 'packets');
-
-                    var self = this;
-                    var sendSinglePacket = (index: number) => {
-                        let packet = {
-                            cmd: CMD.CMD_WRITE,
-                            data: new Uint8Array(256 + 4)
-                        };
-                        let offset = index * 256;
-
-                        let dv = new DataView(packet.data.buffer);
-                        dv.setUint32(0, index * 256, true);
-                        packet.data.set(out_file.slice(offset, offset + 256), 4);
-
-                        DEBUG && console.log('[UPLOAD] upload - sending packet:', index);
-                        self.sendPacket(packet, sbProg)
-                            .then(() => {
-                                if (index < nrPackets - 1) {
-                                    index++;
-                                    sendSinglePacket(index);
-                                } else {
-                                    DEBUG && console.log('[UPLOAD] upload - last packet sent');
-                                    if (!sbProg) {
-                                        let rstPacket: IDataPacket = {
-                                            cmd: CMD.CMD_RESET,
-                                            data: new Uint8Array([0x01, 0x02])
-                                        }
-                                        DEBUG && console.log('[UPLOAD] upload - sending reset packet');
-                                        this.sendPacket(rstPacket)
-                                            .then(() => {
-                                                DEBUG && console.log('[UPLOAD] all packets sent. closing port');
-                                                return this._port.close();
-                                            })
-                                            .then(resolve)
-                                            .catch(reject);
-                                    } else {
-                                        DEBUG && console.log('[UPLOAD] upload - SB-Prog reset device');
-                                        this._port.close()
-                                            .then(() => {
-                                                return this.switchProgMode(ProgMode.PROG_MODE_BL, true, true);
-                                            })
-                                            .then(() => {
-                                                DEBUG && console.log('[UPLOAD] upload - port closed. Switching to terminal mode');
-                                                return this.switchProgMode(ProgMode.PROG_MODE_TERMINAL, true, false);
-                                            })
-                                            .then(resolve)
-                                            .catch(reject);
-                                    }
-                                }
-                            })
-                            .catch(error => {
-                                if (this._port && this._port.isOpen()) {
-                                    this._port.close()
-                                        .then(() => {
-                                            reject(error);
-                                        });
-                                } else {
-                                    reject(error);
-                                }
-                            });
-                    };
-                    sendSinglePacket(index);
-                })
-                .catch(error => {
-                    if (this._port && this._port.isOpen()) {
-                        this._port.close()
-                            .then(() => {
-                                reject(error);
-                            });
-                    } else {
-                        reject(error);
-                    }
-                })
-        });
     }
 
-    private openProgUpload(): Promise<void> {
+    upload(file: Uint8Array): Promise<string> {
         return new Promise((resolve, reject) => {
-            this._port.openForUpload(false, true)
-                .then(() => {
-                    DEBUG && console.log('[UPLOAD] checkProgDevice - checking if any device connected to SB-PROG');
-                    return this._port.write(new Uint8Array([0x7F]));
-                })
-                .then(() => {
-                    return this._port.read();
-                })
-                .then(response => {
-                    DEBUG && console.log('[UPLOAD] checkProgDevice - got response from SB-PROG. length:', response.byteLength);
-                    let dv = new DataView(response.buffer);
-                    if (dv.byteLength < 2) {
-                        throw new Error('There is no connected device to SB-PROG');
+            this._devUploader.open()
+                .then(() => this._devUploader.sendData(file))
+                .then(() => this._devUploader.close())
+                .then(() => this._devUploader.reset())
+                .then(error => {
+                    if (error) {
+                        DEBUG && console.log('[UPLOAD] upload - received error from device');
                     }
-                    resolve();
+                    if (this._devUploader.isOpen()) {
+                        this._devUploader.close()
+                            .then(() => {
+                                resolve(error);
+                            })
+                    } else {
+                        resolve(error);
+                    }
                 })
                 .catch(reject);
         });
     }
 
-    private switchProgMode(mode: ProgMode, brk: boolean, dtr: boolean): Promise<void> {
-        return new Promise((resolve, reject) => {
-            DEBUG && console.log('[UPLOAD] switchProgMode - enter');
-            let baud = 0;
-            if (mode === ProgMode.PROG_MODE_BL) {
-                baud = 0x114472;
-            } else if (mode === ProgMode.PROG_MODE_TERMINAL) {
-                baud = 0x114470;
-            }
+    dispose() {
+        this._devUploader.close();
+    }
+}
 
-            if (this._port && this._port.isOpen()) {
-                DEBUG && console.log('[UPLOAD] switchProgMode - port exists and opened');
-                reject(new Error('Cannot switch mode. Port is opened and probably in use'));
-                return;
-            }
+abstract class BaseDeviceUploader implements IDevUploader {
+    protected _portFactory: ISerialPortFactory;
+    protected _deviceInfo: IDevice;
+    protected _portInfo: ISerialPortInfo;
+    protected _port: ISerialPort | null;
+    private _seqNr: number = 1;
 
-            let port = this._portFactory.createSerialPort(this._portInfo.name, {
-                baudRate: baud
-            });
-
-            port.openForUpload(brk, dtr)
-                .then(() => {
-                    DEBUG && console.log('[UPLOAD] switchProgMode - closing port');
-                    return port.close();
-                })
-                .then(() => {
-                    DEBUG && console.log('[UPLOAD] switchProgMode - port closed. resolving');
-                    resolve();
-                })
-                .catch((error: any) => {
-                    DEBUG && console.log('[UPLOAD] switchProgMode - error detected: ' + error.message);
-                    reject(error);
-                });
-        });
+    constructor(portInfo: ISerialPortInfo, device: IDevice, portFactory: ISerialPortFactory) {
+        this._portFactory = portFactory;
+        this._deviceInfo = device;
+        this._portInfo = portInfo;
+        this._port = null;
     }
 
-    private getProgDeviceInfo(): Promise<any> {
-        return new Promise((resolve, reject) => {
-            DEBUG && console.log('[UPLOAD] getProgDeviceInfo - enter');
-
-            if (this._port && this._port.isOpen()) {
-                reject(new Error('Error getting device info - port already opened'));
-                return;
-            }
-
-            this._port = this._portFactory.createSerialPort(this._portInfo.name, {
-                baudRate: PROG_BAUD,
-                parity: 'even'
-            });
-
-            let sysCode = 0;
-            this.openProgUpload()
-                .then(() => {
-                    let packet = {
-                        cmd: CMD.CMD_BOOT_INF0,
-                        data: new Uint8Array([])
-                    };
-                    DEBUG && console.log('[UPLOAD] getProgDeviceInfo - requesting BOOT info');
-                    return this.sendPacket(packet, true);
-                })
-                .then(response => {
-                    DEBUG && console.log('[UPLOAD] getProgDeviceInfo - got BOOT info');
-                    //console.log(dump(response));
-                    sysCode = new DataView(response.buffer).getUint32(8, true);
-                    return this._port.close();
-                })
-                .then(() => {
-                    DEBUG && console.log('[UPLOAD] getProgDeviceInfo - port closed, resolving');
-                    resolve({
-                        sysCode: sysCode
-                    });
-                })
-                .catch(reject)
-        });
+    isOpen(): boolean {
+        if (!this._port) {
+            return false;
+        }
+        return this._port.isOpen();
     }
 
-    private initPort(): Promise<boolean> {
+    abstract open(): Promise<void>;
+    abstract reset(): Promise<string>;
+    abstract read(timeout?: number): Promise<Uint8Array>;
+
+    close(): Promise<void> {
         return new Promise((resolve, reject) => {
-            DEBUG && console.log('[UPLOAD] initPort');
-
-            if (this._port && this._port.isOpen()) {
-                DEBUG && console.log('[UPLOAD] initPort - port exists and open, closing');
-                reject(new Error('Cannot init port. Port is opened and probably in use'));
-                return;
-            }
-
-            if (this._portInfo.sysCode === 0x4470) {
-                // PROG-SB, get the info about connected device
-                this.switchProgMode(ProgMode.PROG_MODE_BL, true, false)
-                    .then(() => {
-                        return this.getProgDeviceInfo();
-                    })
-                    .then(deviceInfo => {
-                        if (this._device.meta.sysCode !== deviceInfo.sysCode) {
-                            throw new Error('Selected device does not match the connected device.');
-                        }
-                        DEBUG && console.log('[UPLOAD] initPort - device match. Creating new port');
-                        this._port = this._portFactory.createSerialPort(this._portInfo.name, {
-                            baudRate: PROG_BAUD,
-                            parity: 'even'
-                        });
-                        DEBUG && console.log('[UPLOAD] initPort - resolving');
-                        resolve(true);
-                    })
-                    .catch(error => {
-                        DEBUG && console.log('[UPLOAD] initPort - error detected: ' + error.message);
-                        if (this._port.isOpen()) {
-                            this._port.close()
-                                .then(() => {
-                                    return this.switchProgMode(ProgMode.PROG_MODE_TERMINAL, true, false);
-                                })
-                                .then(() => {
-                                    reject(error);
-                                });
-                        } else {
-                            this.switchProgMode(ProgMode.PROG_MODE_TERMINAL, true, false)
-                                .then(() => {
-                                    reject(error);
-                                });
-                        }
-                    });
-            } else if (this._device.meta.sysCode !== this._portInfo.sysCode) {
-                reject(new Error('Selected device does not match the connected device.'));
+            if (!this._port || !this._port.isOpen()) {
+                reject(new Error('Port not opened'));
             } else {
-                DEBUG && console.log('[UPLOAD] initPort - creating new port');
-                this._port = this._portFactory.createSerialPort(this._portInfo.name, {
-                    baudRate: 0x100000 + this._device.meta.sysCode
-                });
-                resolve(false);
+                this._port.close()
+                    .then(resolve)
+                    .catch(reject);
             }
-        })
+        });
     }
 
-    private sendPacket(packet: IDataPacket, sbProg?: boolean): Promise<Uint8Array> {
+    write(data: Uint8Array): Promise<void> {
         return new Promise((resolve, reject) => {
-            let len = packet.data.length + 7,
-                out = new Uint8Array(len),
-                dv = new DataView(out.buffer),
-                index = 0,
-                crc = 0;
-
-            dv.setUint8(index++, 0x1B);
-            dv.setUint8(index++, this._seqNr);
-            dv.setInt16(index, packet.data.length, true);
-            index += 2;
-            dv.setUint8(index++, packet.cmd);
-            dv.setInt8(index++, 0x0E);
-            // put data
-            out.set(packet.data, index);
-            index += packet.data.length;
-            // calc crc
-            for (let i = 0; i < out.length; i++) {
-                crc ^= out[i];
+            if (!this._port || !this._port.isOpen()) {
+                reject(new Error('Port not opened'));
+            } else {
+                this._port.write(data)
+                    .then(resolve)
+                    .catch(reject);
             }
-            dv.setInt8(index, crc);
+        });
+    }
 
-            //console.log('REQUEST:\n' + dump(out));
-            DEBUG && console.log('[UPLOAD] sendPacket (SB-PROG:', !!sbProg, ')');
-            this._port.write(out)
+    private createPacketData(packet: IDataPacket, seqnr: number): Uint8Array {
+        let len = packet.data.length + 7,
+            data = new Uint8Array(len),
+            dv = new DataView(data.buffer),
+            index = 0,
+            crc = 0;
+
+        dv.setUint8(index++, 0x1B);
+        dv.setUint8(index++, seqnr);
+        dv.setInt16(index, packet.data.length, true);
+        index += 2;
+        dv.setUint8(index++, packet.cmd);
+        dv.setInt8(index++, 0x0E);
+        // put data
+        data.set(packet.data, index);
+        index += packet.data.length;
+        // calc crc
+        for (let i = 0; i < data.length; i++) {
+            crc ^= data[i];
+        }
+        dv.setInt8(index, crc);
+
+        return data;
+    }
+
+    sendData(data: Uint8Array): Promise<void> {
+        return new Promise(async (resolve, reject) => {
+            let nrPackets = Math.trunc((data.length + 255) / 256);
+
+            DEBUG && console.log('[UPLOAD] Sending total', nrPackets, 'packets');
+
+            let packet = {
+                cmd: CMD.CMD_WRITE,
+                data: new Uint8Array(256 + 4)
+            };
+
+            for (let index = 0; index < nrPackets; index++) {
+                let offset = index * 256;
+                let dv = new DataView(packet.data.buffer);
+                dv.setUint32(0, index * 256, true);
+                packet.data.set(data.slice(offset, offset + 256), 4);
+
+                DEBUG && console.log('[UPLOAD] Sending packet', index);
+                try {
+                    await this.sendPacket(packet);
+                } catch (error) {
+                    reject(error);
+                }
+                DEBUG && console.log('[UPLOAD] Sent packet', index);
+            }
+
+            resolve();
+        });
+    }
+
+    protected async sendPacket(packet: IDataPacket): Promise<Uint8Array> {
+        return new Promise<Uint8Array>((resolve, reject) => {
+            DEBUG && console.log('[UPLOAD] sendPacket');
+
+            let data = this.createPacketData(packet, this._seqNr);
+
+            this.write(data)
                 .then(() => {
-                    DEBUG && console.log('[UPLOAD] sendPacket. Data written, reading repsonse');
-                    return this._port.read(!!sbProg ? 300 : 0);
+                    DEBUG && console.log('[UPLOAD] sendPacket. Data written, reading response');
+                    return this.read();
                 })
                 .then(response => {
-                    var result, dv,
+                    var dv,
                         crc = 0;
 
-                    //console.log('RESPONSE:\n' + dump(response));
                     DEBUG && console.log('[UPLOAD] sendPacket. Got response');
-                    let offset = sbProg ? 7 + packet.data.length : 0;
-                    DEBUG && console.log('[UPLOAD] sendPacket. Buffer length:', response.byteLength, ', offset:', offset);
-                    dv = new DataView(response.buffer, offset);
+                    dv = new DataView(response.buffer);
 
                     if (dv.getUint8(0) !== 0x1B) {
                         throw new Error('Illegal response');
@@ -344,12 +187,11 @@ export class Uploader {
                     if (dv.getUint8(1) !== this._seqNr) {
                         throw new Error('Unexpected packet number');
                     }
-
                     if (dv.getUint8(5) !== 0x0E) {
                         throw new Error('Illegal response');
                     }
 
-                    for (let i = offset; i < response.length - 1; i++) {
+                    for (let i = 0; i < response.length - 1; i++) {
                         crc ^= response[i];
                     }
 
@@ -357,8 +199,9 @@ export class Uploader {
                         throw new Error('Wrong checksum');
                     }
                     this._seqNr++;
-                    result = new Uint8Array(response.buffer.slice(6 + offset, -1));
-                    resolve(result);
+
+                    let data = response.slice(6, -1);
+                    resolve(data);
                 })
                 .catch(error => {
                     DEBUG && console.log('[UPLOAD] sendPacket. Error:', error.message);
@@ -366,65 +209,154 @@ export class Uploader {
                 });
         });
     }
+}
 
-    private createLboHeader(config: IConfig, codeLength: number): Uint8Array {
-        var meta = this._device.meta;
-        var header = new Uint8Array(LBO_HEADER_SIZE);
-        var dv = new DataView(header.buffer);
+class DeviceUploader extends BaseDeviceUploader {
+    reset(): Promise<string> {
+        return new Promise((resolve, reject) => {
+            let error = '';
+            let rstPacket = {
+                cmd: CMD.CMD_RESET,
+                data: new Uint8Array([0x01, 0x02])
+            };
 
-        // set the sys code of the currently selected device
-        dv.setUint16(0, meta.sysCode, true);
-        // set the size of the LBO header
-        dv.setUint8(2, LBO_HEADER_SIZE);
-        // set the LED-Basic version
-        dv.setUint8(3, meta.basver || 0x0F);
-        // set the size of the code
-        dv.setUint16(4, codeLength, true);
-        // set the max number of LEDs. If a device has a fixed number of LEDs - use
-        // this value, otherwise check the config line from the code or finally a default value
-        let ledcnt: number;
-        if (meta.ledcnt !== undefined) {
-            ledcnt = meta.ledcnt;
-        } else if (config.ledcnt !== undefined) {
-            ledcnt = config.ledcnt;
-        } else if (meta.default_ledcnt !== undefined) {
-            ledcnt = meta.default_ledcnt;
-        } else {
-            ledcnt = 255;
-        }
-        dv.setUint16(6, ledcnt, true);
-        // set the colour order
-        dv.setUint8(8, meta.colour_order || config.colour_order || COLOUR_ORDER.GRB); // colour order RGB / GRB
-        // calculate and set cfg bits
-        var cfg = 0x00;
-        if (config.gprint === true || config.gprint === undefined) {
-            cfg |= 0x02;
-        }
-        if (config.white) {
-            cfg |= 0x01;
-        }
-        if (config.sys_led === undefined) {
-            config.sys_led = 3;
-        }
-        if (config.sys_led) {
-            cfg |= (config.sys_led << 2);
-        }
-        dv.setUint8(9, meta.cfg || cfg);
-        // set the frame rate
-        dv.setUint8(10, config.frame_rate || 25);
-        // set the master brightness
-        dv.setUint8(11, meta.mbr || config.mbr || 100);
-        // set the led type specific to the device
-        dv.setUint8(12, meta.led_type || config.led_type || 0);
-        // set the SPI rate for the APA102 compatible LEDs
-        dv.setUint8(13, meta.spi_rate || config.spi_rate || 4);
+            DEBUG && console.log('[UPLOAD] resetDevice start');
 
-        return header;
+            this.open()
+                .then(() => this.sendPacket(rstPacket))
+                .then(() => this.read(ERROR_GET_TIMEOUT)) // get a possible error
+                .then(data => {
+                    if (data.length) {
+                        error = String.fromCharCode.apply(null, data);
+                    }
+                    return Promise.resolve();
+                })
+                .then(() => this.close())
+                .then(() => {
+                    DEBUG && console.log('[UPLOAD] resetDevice done');
+                    resolve(error);
+                })
+                .catch(reject);
+        });
     }
 
-    dispose() {
-        if (this._port) {
-            this._port.dispose();
-        }
+    read(timeout?: number): Promise<Uint8Array> {
+        return new Promise((resolve, reject) => {
+            if (!this._port || !this._port.isOpen()) {
+                reject(new Error('Port not opened'));
+            } else {
+                this._port.read(timeout)
+                    .then(resolve)
+                    .catch(reject);
+            }
+        });
+    }
+
+    open(): Promise<void> {
+        this._port = this._portFactory.createSerialPort(this._portInfo.name, {
+            baudRate: 0x100000 + this._deviceInfo.meta.sysCode
+        });
+        return this._port.openForUpload(true, false);
+    }
+}
+
+class SBProgUploader extends BaseDeviceUploader {
+    reset(): Promise<string> {
+        return new Promise((resolve, reject) => {
+            let baud = 0x110000 + this._deviceInfo.meta.sysCode;
+
+            let port = this._portFactory.createSerialPort(this._portInfo.name, {
+                baudRate: baud + 2
+            });
+
+            port.openForUpload(true, true)
+                .then(() => port.close())
+                .then(() => {
+                    DEBUG && console.log('[UPLOAD] reset - SB-Prog done');
+                    port = this._portFactory.createSerialPort(this._portInfo.name, {
+                        baudRate: baud
+                    });
+                    return port.openForUpload(true, false);
+                })
+                .then(() => port.close())
+                .then(() => {
+                    DEBUG && console.log('[UPLOAD] SB-Prog switched in terminal mode');
+                    resolve('');
+                })
+                .catch(reject);
+        });
+    }
+
+    read(timeout?: number): Promise<Uint8Array> {
+        timeout = timeout || 200;
+
+        return new Promise((resolve, reject) => {
+            if (!this._port || !this._port.isOpen()) {
+                reject(new Error('Port not opened'));
+            } else {
+                this._port.read(timeout)
+                    .then(response => {
+                        let dv = new DataView(response.buffer);
+                        let requestLength = dv.getUint16(2, true);
+                        let data = response.slice(7 + requestLength);
+                        resolve(data);
+                    })
+                    .catch(reject);
+            }
+        });
+    }
+
+    open(): Promise<void> {
+        return new Promise((resolve, reject) => {
+            let baud = 0x110000 + this._deviceInfo.meta.sysCode + 2;
+
+            let port = this._portFactory.createSerialPort(this._portInfo.name, {
+                baudRate: baud
+            });
+
+            port.openForUpload(true, false)
+                .then(() => port.close())
+                .then(() => {
+                    port = this._portFactory.createSerialPort(this._portInfo.name, {
+                        baudRate: PROG_BAUD,
+                        parity: 'even'
+                    });
+                    return port.openForUpload(false, true);
+                })
+                .then(() => {
+                    return port.write(new Uint8Array([0x7F]));
+                })
+                .then(() => {
+                    return port.read();
+                })
+                .then(response => {
+                    if (response.length < 2) {
+                        throw new Error('There is no connected device to SB-PROG');
+                    }
+                    let packet = {
+                        cmd: CMD.CMD_BOOT_INF0,
+                        data: new Uint8Array([])
+                    };
+                    this._port = port;
+                    return this.sendPacket(packet);
+                })
+                .then((response) => {
+                    let sysCode = String.fromCharCode.apply(null, response.slice(0, 4));
+                    if (this._deviceInfo.meta.sysCode !== parseInt(sysCode, 16)) {
+                        throw new Error('Selected device does not match the connected device.');
+                    }
+                    resolve();
+                })
+                .catch(error => {
+                    if (port.isOpen()) {
+                        port.close()
+                            .then(() => {
+                                reject(error);
+                            })
+                    } else {
+                        reject(error);
+                    }
+                });
+        });
     }
 }

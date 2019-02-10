@@ -51,7 +51,7 @@ const DEVICES: Device[] = [
     {
         label: 'Basic-Pentagon-Board',
         detail: 'Supports PWM LEDs, DS18B20 temp. sensor, RTC, LDR. 3 buttons on board.',
-        commands: CMD_LED_PWM.concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_LDR).concat(CMD_IO_IR).concat(CMD_IO_PORT).concat(CMD_IO_TEMP),
+        commands: CMD_LED_PWM.concat(CMD_LED_BRIGHT).concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_LDR).concat(CMD_IO_IR).concat(CMD_IO_PORT).concat(CMD_IO_TEMP),
         meta: {
             sysCode: 0x3130
         }
@@ -59,7 +59,7 @@ const DEVICES: Device[] = [
     {
         label: 'Basic-Budget-Board',
         detail: 'Supports PWM LEDs, DS18B20 temp. sensor, RTC, LDR, buttons',
-        commands: CMD_LED_PWM.concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_LDR).concat(CMD_IO_IR).concat(CMD_IO_PORT).concat(CMD_IO_TEMP),
+        commands: CMD_LED_PWM.concat(CMD_LED_BRIGHT).concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_LDR).concat(CMD_IO_IR).concat(CMD_IO_PORT).concat(CMD_IO_TEMP),
         meta: {
             sysCode: 0x3130
         }
@@ -67,7 +67,7 @@ const DEVICES: Device[] = [
     {
         label: 'Cronios 1',
         detail: 'Basis module for LED clocks',
-        commands: CMD_LED_PWM.concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_LDR).concat(CMD_IO_SOUND).concat(CMD_IO_ENC).concat(CMD_IO_EEP).concat(CMD_IO_SYS),
+        commands: CMD_LED_PWM.concat(CMD_LED_BRIGHT).concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_LDR).concat(CMD_IO_SOUND).concat(CMD_IO_ENC).concat(CMD_IO_EEP).concat(CMD_IO_SYS),
         meta: {
             sysCode: 0x3140
         }
@@ -75,7 +75,7 @@ const DEVICES: Device[] = [
     {
         label: 'Cronios-Segmenta',
         detail: 'Clock module based on 7-segment digits',
-        commands: CMD_LED_PWM.concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_LDR).concat(CMD_IO_PORT).concat(CMD_IO_TEMP).concat(CMD_IO_SOUND).concat(CMD_IO_EEP),
+        commands: CMD_LED_PWM.concat(CMD_LED_BRIGHT).concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_LDR).concat(CMD_IO_PORT).concat(CMD_IO_TEMP).concat(CMD_IO_SOUND).concat(CMD_IO_EEP),
         meta: {
             sysCode: 0x3150
         }
@@ -83,7 +83,7 @@ const DEVICES: Device[] = [
     {
         label: 'Basic-Booster',
         detail: 'Compact module for WS2812 compatible LEDs',
-        commands: CMD_LED_PWM.concat(CMD_IO_KEY).concat(CMD_IO_PORT).concat(CMD_IO_IR),
+        commands: CMD_LED_PWM.concat(CMD_LED_BRIGHT).concat(CMD_IO_KEY).concat(CMD_IO_PORT).concat(CMD_IO_IR),
         meta: {
             sysCode: 0x3160,
             needsSbProg: true
@@ -120,7 +120,7 @@ const DEVICES: Device[] = [
     {
         label: 'All-In-One Power-M4-Board',
         detail: 'Powerfull board with many supported features.',
-        commands: CMD_LED_PWM.concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_LDR).concat(CMD_IO_IR).concat(CMD_IO_ENC).concat(CMD_IO_PORT).concat(CMD_IO_TEMP).concat(CMD_IO_SOUND).concat(CMD_IO_EEP),
+        commands: CMD_LED_PWM.concat(CMD_LED_BRIGHT).concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_LDR).concat(CMD_IO_IR).concat(CMD_IO_ENC).concat(CMD_IO_PORT).concat(CMD_IO_TEMP).concat(CMD_IO_SOUND).concat(CMD_IO_EEP),
         meta: {
             sysCode: 0x3210,
             default_ledcnt: 1024,
@@ -130,7 +130,7 @@ const DEVICES: Device[] = [
     {
         label: 'LED-Box',
         detail: 'Ready to use package with controller, IR RC and LED stripe.',
-        commands: CMD_LED_PWM.concat(CMD_IO_KEY).concat(CMD_IO_LDR).concat(CMD_IO_IR).concat(CMD_IO_PORT).concat(CMD_IO_EEP),
+        commands: CMD_LED_PWM.concat(CMD_LED_BRIGHT).concat(CMD_IO_KEY).concat(CMD_IO_LDR).concat(CMD_IO_IR).concat(CMD_IO_PORT).concat(CMD_IO_EEP),
         meta: {
             sysCode: 0x3220
         }
@@ -138,7 +138,7 @@ const DEVICES: Device[] = [
     {
         label: 'APA Booster',
         detail: 'Compact module for APA102 comaptible LEDs.',
-        commands: CMD_LED_PWM.concat(CMD_IO_KEY).concat(CMD_IO_PORT),
+        commands: CMD_LED_PWM.concat(CMD_LED_BRIGHT).concat(CMD_IO_KEY).concat(CMD_IO_PORT),
         meta: {
             sysCode: 0x3230,
             needsSbProg: true
@@ -147,7 +147,7 @@ const DEVICES: Device[] = [
     {
         label: 'RC-Box',
         detail: 'Module with RF remote control support.',
-        commands: CMD_LED_PWM.concat(CMD_IO_KEY).concat(CMD_IO_PORT).concat(CMD_IO_ADC).concat(CMD_IO_IR).concat(CMD_IO_EEP),
+        commands: CMD_LED_PWM.concat(CMD_LED_BRIGHT).concat(CMD_IO_KEY).concat(CMD_IO_PORT).concat(CMD_IO_ADC).concat(CMD_IO_IR).concat(CMD_IO_EEP),
         meta: {
             sysCode: 0x3240
         }
@@ -155,7 +155,7 @@ const DEVICES: Device[] = [
     {
         label: 'Touch-Lamp',
         detail: 'Baseboard for a LED lamp.',
-        commands: CMD_LED_PWM.concat(CMD_IO_KEY).concat(CMD_IO_PORT).concat(CMD_IO_IR).concat(CMD_IO_EEP),
+        commands: CMD_LED_PWM.concat(CMD_LED_BRIGHT).concat(CMD_IO_KEY).concat(CMD_IO_PORT).concat(CMD_IO_IR).concat(CMD_IO_EEP),
         meta: {
             sysCode: 0x3270,
             ledcnt: 8
@@ -173,7 +173,7 @@ const DEVICES: Device[] = [
     {
         label: 'NixieCron - Cronios 2',
         detail: 'Imporved basis module for LED clocks',
-        commands: CMD_LED_PWM.concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_LDR).concat(CMD_IO_SOUND).concat(CMD_IO_ENC).concat(CMD_IO_EEP).concat(CMD_IO_SYS),
+        commands: CMD_LED_PWM.concat(CMD_LED_BRIGHT).concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_LDR).concat(CMD_IO_SOUND).concat(CMD_IO_ENC).concat(CMD_IO_EEP).concat(CMD_IO_SYS),
         meta: {
             sysCode: 0x3350
         }
@@ -181,7 +181,7 @@ const DEVICES: Device[] = [
     {
         label: 'NixieCron - LED-Nixie-M4',
         detail: 'LED clock module with support of 4 digits',
-        commands: CMD_LED_PWM.concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_LDR).concat(CMD_IO_SOUND).concat(CMD_IO_ENC).concat(CMD_IO_EEP).concat(CMD_IO_SYS),
+        commands: CMD_LED_PWM.concat(CMD_LED_BRIGHT).concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_LDR).concat(CMD_IO_SOUND).concat(CMD_IO_ENC).concat(CMD_IO_EEP).concat(CMD_IO_SYS),
         meta: {
             sysCode: 0x3320
         }
@@ -189,9 +189,10 @@ const DEVICES: Device[] = [
     {
         label: 'LED-BASIC-PICO',
         detail: 'Tiny breadboard friendly base module',
-        commands: CMD_LED_PWM.concat(CMD_LED_SEG).concat(CMD_IO_KEY).concat(CMD_IO_PORT).concat(CMD_IO_ADC).concat(CMD_IO_IR).concat(CMD_IO_ENC).concat(CMD_IO_TEMP).concat(CMD_IO_SOUND).concat(CMD_IO_EEP).concat(CMD_IO_RTC).concat(CMD_IO_SYS),
+        commands: CMD_LED_PWM.concat(CMD_LED_SEG).concat(CMD_LED_BRIGHT).concat(CMD_IO_KEY).concat(CMD_IO_PORT).concat(CMD_IO_ADC).concat(CMD_IO_IR).concat(CMD_IO_ENC).concat(CMD_IO_TEMP).concat(CMD_IO_SOUND).concat(CMD_IO_EEP).concat(CMD_IO_RTC).concat(CMD_IO_SYS),
         meta: {
-            sysCode: 0x3210
+            sysCode: 0x3370,
+            ledcnt: 64
         }
     }
 ];

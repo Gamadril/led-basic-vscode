@@ -1,6 +1,6 @@
 'use strict';
 
-import { DiagnosticCollection, Diagnostic, DiagnosticSeverity, Range, TextDocument, Position } from "vscode";
+import { DiagnosticCollection, Diagnostic, DiagnosticSeverity, Range, TextDocument, Position, workspace } from "vscode";
 import { deviceSelector } from "./DeviceSelector";
 import { LEDBasicParserFactory } from "./LEDBasicParserFactory";
 import { IError, IRange } from "./Common";
@@ -22,7 +22,6 @@ export class LEDBasicCodeValidator {
     }
 
     dispose() {
-        this._diagnosticCollection.dispose();
         if (this._runner !== null) {
             clearTimeout(this._runner);
             this._runner = null;
@@ -107,6 +106,10 @@ export class LEDBasicCodeValidator {
 
                 while (m = reg.exec(line.text)) {
                     let funcName = m[2];
+                    let config = workspace.getConfiguration('led_basic');
+                    if (config.caseInsensitiveCalls) {
+                        funcName = funcName.toLowerCase();
+                    }
                     //let args = m[3];
                     let cmd = currentDevice.commands.find(cmd => { return cmd.name === funcName });
                     if (!cmd) {
@@ -136,7 +139,10 @@ export class LEDBasicCodeValidator {
                         }
                         args = args.substr(1, args.length - 2);
 
+                        // detect if arguments contain a read call
+                        let readCalls = args.split('read ').length - 1;
                         let ac = args ? args.split(',').length : 0;
+                        ac = ac - readCalls;
                         if (ac !== cmd.argcount) {
                             let start = new Position(index, m.index);
                             let end = new Position(index, m.index + m[1].length);

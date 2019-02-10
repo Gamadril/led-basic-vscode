@@ -69,7 +69,6 @@ class Terminal {
             this._port = new SerialPort(selectedPort.name);
             this._port.open()
                 .then(() => {
-                    debugger;
                     if (this._shell === null) {
                         this._shell = window.createTerminalRenderer(TERMINAL_NAME);
                     }

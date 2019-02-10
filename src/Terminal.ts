@@ -2,7 +2,7 @@
 
 import { SerialPort } from "./SerialPort";
 import { portSelector } from "./PortSelector";
-import { StatusBarItem, window, StatusBarAlignment, debug } from "vscode";
+import { StatusBarItem, window, StatusBarAlignment, OutputChannel } from "vscode";
 
 /**
  * Terminal state
@@ -13,28 +13,15 @@ export enum TERM_STATE {
     DISABLED
 };
 
-const REG_ERROR = new RegExp('\\?ERROR ([0-9]+) IN LINE ([0-9]+)');
-
-const ERROR_MAP: { [s: string]: string; } = {
-    '11': 'Unknown token',
-    '12': 'Wrong address',
-    '13': 'Too many nested GOSUB commands',
-    '14': 'RETURN wihtout GOSUB',
-    '15': 'Value cannot be 0',
-    '16': 'Too many nested FOR-NEXT loops',
-    '17': 'Incorrect values at TO/DOWNTO',
-    '18': 'Next variable is invalid',
-    '19': 'Wrong value in LED command',
-    '20': 'Wrong value in IO command'
-};
-
 class Terminal {
+    private _channel: OutputChannel;
     private _state: TERM_STATE = TERM_STATE.DISABLED;
     private _statusBarItem: StatusBarItem;
     private _port: SerialPort | null = null;
     private _deviceName: string;
 
     constructor() {
+        this._channel = window.createOutputChannel('BLP-Device-Output');
         this._statusBarItem = window.createStatusBarItem(StatusBarAlignment.Left, 2);
         this._statusBarItem.command = 'led_basic.terminal';
         this._statusBarItem.show();
@@ -52,7 +39,7 @@ class Terminal {
                 resolve();
                 return;
             }
-
+                                                                                                                                                                                                                                                                                    
             let selectedPort = portSelector.selectedPort();
             if (!selectedPort) {
                 reject(new Error('Serial port not selected.'));
@@ -60,26 +47,20 @@ class Terminal {
             }
             this._deviceName = selectedPort.deviceName;
 
-            this._port = new SerialPort(selectedPort.name);
+            this._port = new SerialPort(selectedPort.name, {
+                baudRate: 115200
+            });
             this._port.open()
                 .then(() => {
-                    debug.activeDebugConsole.appendLine('\x1b[32mConnected to LED Basic device: \x1b[36m' + this._deviceName + '\x1b[0m\n');
+                    this.addLine('> Connected to LED Basic device: ' + this._deviceName);
 
                     if (this._port) {
                         this._port.setReadListener(data => {
                             let msg = String.fromCharCode.apply(null, data);
                             if (msg.startsWith('?ERROR')) {
-                                debug.activeDebugConsole.appendLine('\x1b[31m' + msg + '\x1b[0m');
-
-                                let match = REG_ERROR.exec(msg);
-                                if (match) {
-                                    let err = ERROR_MAP[match[1]];
-                                    if (err) {
-                                        window.showErrorMessage(err + ' in line ' + match[2]);
-                                    }
-                                }
+                                this.addLine(msg);
                             } else {
-                                debug.activeDebugConsole.appendLine(msg);
+                                this.addLine(msg);
                             }
                         });
                     }
@@ -97,9 +78,14 @@ class Terminal {
         } else {
             this._state = TERM_STATE.DISCONNECTED;
             this.update();
-            debug.activeDebugConsole.appendLine('\x1b[32mDisconnected from \x1b[36m' + this._deviceName + '\x1b[0m\n');
+            this.addLine('> Disconnected from ' + this._deviceName);
             return this._port.close();
         }
+    }
+
+    private addLine(message: string) {
+        this._channel.show();
+        this._channel.appendLine(message);
     }
 
     get state(): TERM_STATE {
@@ -132,6 +118,7 @@ class Terminal {
 
     dispose() {
         this._statusBarItem.dispose();
+        this._channel.dispose();
     }
 }
 

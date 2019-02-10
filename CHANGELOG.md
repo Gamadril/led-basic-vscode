@@ -1,5 +1,14 @@
 # LED Basic extension changelog
 
+## 1.3.0 - 20.02.2019
+- Fixed LED-BASIC-PICO base module support
+- Default setting value for opening terminal after upload set to false
+- Reduced once again terminal implementation to simple output. Still waiting for TerminalRenderer API.
+- Added alternative libUSB based serial port implementation for Windows platform
+- Added configuration property "caseInsensitiveCalls" to skip case sensitive lib calls check and not show them in the problems view
+- If the uploaded code leads to an error on the device, some BLP devices send the error code back to the host. If such an error is detected it is shown in the problem view pointing to the corresponding code line.
+- Fixed an error in the check for the correct number of arguments in function calls. A data read call is now detected as one argument.
+
 ## 1.2.2 - 08.02.2019
 - Rebuild of the serial port library was required for VSCode 1.31.0
 - Icon added

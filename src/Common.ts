@@ -89,7 +89,7 @@ export interface ISerialPortInfo {
 export interface ISerialPort {
     isOpen(): boolean,
     close(): Promise<void>,
-    read(size?: number): Promise<Uint8Array>,
+    read(timeout?: number): Promise<Uint8Array>,
     write(data: Uint8Array): Promise<void>,
     openForUpload(brk?: boolean, dtr?: boolean): Promise<void>,
     dispose(): void
@@ -117,6 +117,116 @@ interface ILibMap {
             [name: string]: number
         }
     }
+}
+
+export interface IDevUploader {
+    isOpen(): boolean,
+    open(): Promise<void>,
+    close(): Promise<void>,
+    reset(): Promise<string>,
+    write(data: Uint8Array): Promise<void>,
+    read(timeout?: number): Promise<Uint8Array>,
+    sendData(data: Uint8Array): Promise<void>
+}
+
+const LBO_HEADER_SIZE = 16;
+export function parseResultToArray(result: IParseResult, meta: IMetaData): Uint8Array {
+    var data = new Uint8Array(result.code.length + LBO_HEADER_SIZE);
+    let header = createLboHeader(result.config, result.code.length, meta);
+    data.set(header, 0);
+    data.set(result.code, LBO_HEADER_SIZE);
+    return data;
+}
+
+function createLboHeader(config: IConfig, codeLength: number, meta: IMetaData): Uint8Array {
+    var header = new Uint8Array(LBO_HEADER_SIZE);
+    var dv = new DataView(header.buffer);
+
+    // set the sys code of the currently selected device
+    dv.setUint16(0, meta.sysCode, true);
+    // set the size of the LBO header
+    dv.setUint8(2, LBO_HEADER_SIZE);
+    // set the LED-Basic version
+    dv.setUint8(3, meta.basver || 0x0F);
+    // set the size of the code
+    dv.setUint16(4, codeLength, true);
+    // set the max number of LEDs. If a device has a fixed number of LEDs - use
+    // this value, otherwise check the config line from the code or finally a default value
+    let ledcnt: number;
+    if (meta.ledcnt !== undefined) {
+        ledcnt = meta.ledcnt;
+    } else if (config.ledcnt !== undefined) {
+        ledcnt = config.ledcnt;
+    } else if (meta.default_ledcnt !== undefined) {
+        ledcnt = meta.default_ledcnt;
+    } else {
+        ledcnt = 255;
+    }
+    dv.setUint16(6, ledcnt, true);
+    // set the colour order
+    dv.setUint8(8, meta.colour_order || config.colour_order || COLOUR_ORDER.GRB); // colour order RGB / GRB
+    // calculate and set cfg bits
+    var cfg = 0x00;
+    if (config.gprint === true || config.gprint === undefined) {
+        cfg |= 0x02;
+    }
+    if (config.white) {
+        cfg |= 0x01;
+    }
+    if (config.sys_led === undefined) {
+        config.sys_led = 3;
+    }
+    if (config.sys_led) {
+        cfg |= (config.sys_led << 2);
+    }
+    dv.setUint8(9, meta.cfg || cfg);
+    // set the frame rate
+    dv.setUint8(10, config.frame_rate || 25);
+    // set the master brightness
+    dv.setUint8(11, meta.mbr || config.mbr || 100);
+    // set the led type specific to the device
+    dv.setUint8(12, meta.led_type || config.led_type || 0);
+    // set the SPI rate for the APA102 compatible LEDs
+    dv.setUint8(13, meta.spi_rate || config.spi_rate || 4);
+
+    return header;
+}
+
+const REG_ERROR = new RegExp('\\?ERROR ([0-9]+) IN LINE ([0-9]+)');
+const ERROR_MAP: { [s: string]: string; } = {
+    '11': 'Unknown token',
+    '12': 'Wrong address',
+    '13': 'Too many nested GOSUB commands',
+    '14': 'RETURN wihtout GOSUB',
+    '15': 'Value cannot be 0',
+    '16': 'Too many nested FOR-NEXT loops',
+    '17': 'Incorrect values at TO/DOWNTO',
+    '18': 'Next variable is invalid',
+    '19': 'Wrong value in LED command',
+    '20': 'Wrong value in IO command'
+};
+
+export interface IDeviceError {
+    line: number;
+    code: number;
+    msg: string;
+}
+
+export function decodeErrorMessage(error: string): IDeviceError | null {
+    let result = null;
+    let match = REG_ERROR.exec(error);
+    if (match) {
+        result = {
+            code: parseInt(match[1], 10),
+            line: parseInt(match[2], 10),
+            msg: error
+        }
+        let err = ERROR_MAP[match[1]];
+        if (err) {
+            result.msg = '"' + err + ' in line ' + match[2] + '"';
+        }
+    }
+    return result;
 }
 
 export const lib_map: ILibMap = {

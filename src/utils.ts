@@ -40,7 +40,7 @@ export function getExtensionPath(): string {
  * Converts the provided array to a HEX string representation
  * @param array 
  */
-export function dump(array: Uint8Array) {
+export function dump(array: Uint8Array): string {
     var str = '';
     for (var index = 0; index < array.length; index++) {
         str += ('0' + (Number(array[index]).toString(16))).slice(-2).toUpperCase();
@@ -51,4 +51,9 @@ export function dump(array: Uint8Array) {
         }
     }
     return str;
+}
+
+export function dumpToFile(array: Uint8Array, path: string) {
+    const fs = require('fs');
+    fs.writeFileSync(path, array);
 }

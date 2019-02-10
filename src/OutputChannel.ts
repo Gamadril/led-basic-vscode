@@ -14,21 +14,21 @@ class Output {
     clear(): Promise<void> {
         return new Promise((resolve) => {
             this.channel.clear();
-            setTimeout(resolve, 0);
+            setTimeout(resolve, 1);
         });
     }
 
     logInfo(message: string): Promise<void> {
         return new Promise((resolve) => {
             this.addLine('[INFO]  ' + message);
-            setTimeout(resolve, 0);
+            setTimeout(resolve, 1);
         });
     }
 
     logError(message: string): Promise<void> {
         return new Promise((resolve) => {
-            this.addLine('[ERROR] ' + message);
-            setTimeout(resolve, 0);
+            this.addLine('[ERROR] ' + message);      
+            setTimeout(resolve, 1);
         });
     }
 
