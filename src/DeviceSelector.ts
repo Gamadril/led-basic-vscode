@@ -191,7 +191,7 @@ const DEVICES: Device[] = [
         detail: 'Tiny breadboard friendly base module',
         commands: CMD_LED_PWM.concat(CMD_LED_SEG).concat(CMD_IO_KEY).concat(CMD_IO_PORT).concat(CMD_IO_ADC).concat(CMD_IO_IR).concat(CMD_IO_ENC).concat(CMD_IO_TEMP).concat(CMD_IO_SOUND).concat(CMD_IO_EEP).concat(CMD_IO_RTC).concat(CMD_IO_SYS),
         meta: {
-            sysCode: 0x3210
+            sysCode: 0x3370
         }
     }
 ];
