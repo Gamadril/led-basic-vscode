@@ -1,5 +1,12 @@
 # LED Basic extension changelog
 
+## 1.2.4 - 26.02.2019
+- corrected list of allowed commands for PICO module
+- fixed wrong config value for PICO module which made it freeze after code upload
+
+## 1.2.3 - 26.02.2019
+- corrected sys code for PICO module
+
 ## 1.2.2 - 08.02.2019
 - Rebuild of the serial port library was required for VSCode 1.31.0
 - Icon added
