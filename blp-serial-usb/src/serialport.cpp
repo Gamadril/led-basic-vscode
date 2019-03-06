@@ -549,8 +549,9 @@ static NAN_METHOD(ListDevices) {
 
         libusb_close(handle);
       } else {
-        return Nan::ThrowError(
-            (std::string("libusb open error: ") + libusb_error_name(res)).c_str());
+        // assume it's a regular com port without WinUSB driver, libUSB cannot open it
+        //return Nan::ThrowError((std::string("libusb open error: ") + libusb_error_name(res)).c_str());
+        continue;
       }
 
       blpDevice->Set(Nan::New<String>("vendorId").ToLocalChecked(),

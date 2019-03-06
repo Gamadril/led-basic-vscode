@@ -214,7 +214,7 @@ export class SerialPort implements ISerialPort, Disposable {
         return new Promise((resolve, reject) => {
             DEBUG && console.log('[SERIAL] write');
             //DEBUG && console.log('[SERIAL] >\n' + dump(data));
-            this._port.write(Buffer.from(data.buffer), null, (error: Error) => {
+            this._port.write(Buffer.from(data.buffer as ArrayBuffer), null, (error: Error) => {
                 if (error) {
                     DEBUG && console.log('[SERIAL] error writing: ' + error.message);
                     reject(error.message);

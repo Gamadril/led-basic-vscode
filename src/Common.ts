@@ -197,7 +197,7 @@ const ERROR_MAP: { [s: string]: string; } = {
     '11': 'Unknown token',
     '12': 'Wrong address',
     '13': 'Too many nested GOSUB commands',
-    '14': 'RETURN wihtout GOSUB',
+    '14': 'RETURN without GOSUB',
     '15': 'Value cannot be 0',
     '16': 'Too many nested FOR-NEXT loops',
     '17': 'Incorrect values at TO/DOWNTO',

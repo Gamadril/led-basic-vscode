@@ -217,10 +217,6 @@ export function activate(ctx: vscode.ExtensionContext) {
             LED_BASIC, new LEDBasicDocumentFormatter()));
 
     ctx.subscriptions.push(
-        vscode.languages.registerHoverProvider(
-            LED_BASIC, new LEDBasicHoverProvider()));
-
-    ctx.subscriptions.push(
         vscode.languages.registerCompletionItemProvider(
             LED_BASIC, completionProvider, '.'));
 
@@ -236,9 +232,14 @@ export function activate(ctx: vscode.ExtensionContext) {
         vscode.languages.registerReferenceProvider(
             LED_BASIC, new LEDBasicReferenceProvider()));
 
+    let dsp = new LEDBasicDocumentSymbolProvider();
     ctx.subscriptions.push(
         vscode.languages.registerDocumentSymbolProvider(
-            LED_BASIC, new LEDBasicDocumentSymbolProvider()));
+            LED_BASIC, dsp));
+
+    ctx.subscriptions.push(
+        vscode.languages.registerHoverProvider(
+            LED_BASIC, new LEDBasicHoverProvider(dsp)));
 
     ctx.subscriptions.push(diagnosticCollection);
     ctx.subscriptions.push(codeValidator);

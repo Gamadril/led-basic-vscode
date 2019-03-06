@@ -20,11 +20,13 @@ export class LEDBasicDocumentSymbolProvider implements DocumentSymbolProvider {
             let end = document.positionAt(index + match[2].length);
             
             label = match[2];
+            let desc = '';
             if (match[1]) {
-                label += ' - ' + match[1].trim();
+                desc = match[1].trim();
+                label += ' - ' + desc;
             }
 
-            result.push(new DocumentSymbol(label, 'Method', SymbolKind.Method, new Range(start, end), new Range(start, end)));
+            result.push(new DocumentSymbol(label, desc, SymbolKind.Method, new Range(start, end), new Range(start, end)));
         }
 
         // check for data labels
@@ -36,11 +38,13 @@ export class LEDBasicDocumentSymbolProvider implements DocumentSymbolProvider {
             let end = document.positionAt(index + match[2].length);
             
             label = match[2];
+            let desc = '';
             if (match[1]) {
-                label += ' - ' + match[1].trim();
+                desc = match[1].trim();
+                label += ' - ' + desc;
             }
 
-            result.push(new DocumentSymbol(label, 'Data', SymbolKind.Field, new Range(start, end), new Range(start, end)));
+            result.push(new DocumentSymbol(label, desc, SymbolKind.Field, new Range(start, end), new Range(start, end)));
         }
         
         return result;
