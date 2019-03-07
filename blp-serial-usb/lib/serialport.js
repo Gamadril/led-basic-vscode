@@ -24,7 +24,7 @@ function allocNewReadPool(poolSize) {
     return pool;
 }
 
-const _debug = true;
+const _debug = false;
 const debug = (...msg) => {
     if (_debug) console.log(msg.reduce((l, r) => {
         return JSON.stringify(l).replace(new RegExp('"', 'g'), '') + ' ' + JSON.stringify(r).replace(new RegExp('"', 'g'), '');

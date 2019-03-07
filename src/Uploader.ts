@@ -50,7 +50,14 @@ export class Uploader {
                         resolve(error);
                     }
                 })
-                .catch(reject);
+                .catch(error => {
+                    if (this._devUploader.isOpen()) {
+                        this._devUploader.close()
+                            .then(() => reject(error))
+                    } else {
+                        reject(error);
+                    }
+                });
         });
     }
 

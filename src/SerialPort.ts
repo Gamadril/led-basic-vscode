@@ -29,7 +29,7 @@ export class SerialPort implements ISerialPort, Disposable {
         options.autoOpen = false;
         options.hupcl = false;
 
-        if (process.platform === 'win32' && this._portName.startsWith('usb')) {
+        if (this._portName.startsWith('usb')) {
             this._port = new USB_SP(this._portName, options);
         } else {
             this._port = new SP(this._portName, options);
