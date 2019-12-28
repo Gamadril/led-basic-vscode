@@ -1,12 +1,12 @@
 'use strict';
 
-import { DiagnosticCollection, Diagnostic, DiagnosticSeverity, Range, TextDocument, Position, workspace } from "vscode";
-import { deviceSelector } from "./DeviceSelector";
-import { LEDBasicParserFactory } from "./LEDBasicParserFactory";
-import { IError, IRange } from "./Common";
+import { Diagnostic, DiagnosticCollection, DiagnosticSeverity, Position, Range, TextDocument, workspace } from 'vscode';
+import { IError, IRange } from './Common';
+import { deviceSelector } from './DeviceSelector';
+import { LEDBasicParserFactory } from './LEDBasicParserFactory';
 
 function IRange2Range(range: IRange) {
-    let result : Range = new Range(
+    const result: Range = new Range(
         new Position(range.start.line, range.start.character),
         new Position(range.end.line, range.end.character)
     );
@@ -14,17 +14,17 @@ function IRange2Range(range: IRange) {
 }
 
 export class LEDBasicCodeValidator {
-    private _runner: NodeJS.Timer | null = null;
-    private _diagnosticCollection: DiagnosticCollection;
+    private runner: NodeJS.Timer | null = null;
+    private diagnosticCollection: DiagnosticCollection;
 
     constructor(diagnosticCollection: DiagnosticCollection) {
-        this._diagnosticCollection = diagnosticCollection;
+        this.diagnosticCollection = diagnosticCollection;
     }
 
-    dispose() {
-        if (this._runner !== null) {
-            clearTimeout(this._runner);
-            this._runner = null;
+    public dispose() {
+        if (this.runner !== null) {
+            clearTimeout(this.runner);
+            this.runner = null;
         }
     }
 
@@ -32,22 +32,22 @@ export class LEDBasicCodeValidator {
      * Validates the provided document. The validation itself is executed after a delay if no other calls were registered in thea period of time
      * @param doc - Textdocument object of the current file
      */
-    validate(doc: TextDocument) {
+    public validate(doc: TextDocument) {
         if (doc.isUntitled) {
             return;
         }
         if (doc.languageId !== 'led_basic') {
             return;
         }
-        if (this._runner !== null) {
-            clearTimeout(this._runner);
+        if (this.runner !== null) {
+            clearTimeout(this.runner);
         }
-        this._runner = setTimeout(() => {
-            let result = this.processFile(doc);
+        this.runner = setTimeout(() => {
+            const result = this.processFile(doc);
             if (!result) {
                 // commands.executeCommand("workbench.action.problems.focus");
             }
-            this._runner = null;
+            this.runner = null;
         }, 1000);
     }
 
@@ -56,7 +56,7 @@ export class LEDBasicCodeValidator {
      * @param doc - Textdocument object of the current file
      */
 
-    validateNow(doc: TextDocument) {
+    public validateNow(doc: TextDocument) {
         return this.processFile(doc);
     }
 
@@ -65,38 +65,39 @@ export class LEDBasicCodeValidator {
      * @param doc - Textdocument object of the current file
      */
     private processFile(doc: TextDocument): boolean {
-        this._diagnosticCollection.clear();
+        this.diagnosticCollection.clear();
 
-        let sourceCode = doc.getText();
-        let parser = LEDBasicParserFactory.getParser();
+        const sourceCode = doc.getText();
+        const parser = LEDBasicParserFactory.getParser();
         let matchResult = parser.match(sourceCode);
 
         if (!matchResult.success && matchResult.errors) {
-            let diagnostics = matchResult.errors.map((error: IError) => {
-                return new Diagnostic(IRange2Range(error.range), error.message, DiagnosticSeverity.Error)
+            const diagnostics = matchResult.errors.map((error: IError) => {
+                return new Diagnostic(IRange2Range(error.range), error.message, DiagnosticSeverity.Error);
             });
-            this._diagnosticCollection.set(doc.uri, diagnostics);
+            this.diagnosticCollection.set(doc.uri, diagnostics);
             return false;
         } else {
             try {
                 matchResult = parser.match(sourceCode);
             } catch (e) {
+                // tslint:disable-next-line: no-console
                 console.log(e);
             }
 
-            let diagnostics: Diagnostic[] = [];
+            const diagnostics: Diagnostic[] = [];
 
             if (!matchResult.success && matchResult.errors) {
                 diagnostics.concat(matchResult.errors.map((error: IError) => {
-                    return new Diagnostic(IRange2Range(error.range), error.message, DiagnosticSeverity.Error)
+                    return new Diagnostic(IRange2Range(error.range), error.message, DiagnosticSeverity.Error);
                 }));
             }
 
             // check for illegal API usage
-            let currentDevice = deviceSelector.selectedDevice();
+            const currentDevice = deviceSelector.selectedDevice();
             let line;
             let m;
-            let reg = new RegExp('((?:IO|LED)\\.([a-zA-Z]+))', 'gim');
+            const reg = new RegExp('((?:IO|LED|MATRIX)\\.([a-zA-Z]+))', 'gim');
             for (let index = 0; index < doc.lineCount; index++) {
                 line = doc.lineAt(index);
                 // skip line if empty or is a comment
@@ -104,18 +105,19 @@ export class LEDBasicCodeValidator {
                     continue;
                 }
 
+                // tslint:disable-next-line: no-conditional-assignment
                 while (m = reg.exec(line.text)) {
                     let funcName = m[2];
-                    let config = workspace.getConfiguration('led_basic');
+                    const config = workspace.getConfiguration('led_basic');
                     if (config.caseInsensitiveCalls) {
                         funcName = funcName.toLowerCase();
                     }
-                    //let args = m[3];
-                    let cmd = currentDevice.commands.find(cmd => { return cmd.name === funcName });
+                    // let args = m[3];
+                    const cmd = currentDevice.commands.find((command) => command.name === funcName);
                     if (!cmd) {
-                        let start = new Position(index, m.index);
-                        let end = new Position(index, m.index + m[1].length);
-                        let diagnostic = new Diagnostic(new Range(start, end), 'Command "' + m[1] + '" is not supported by current device', DiagnosticSeverity.Error);
+                        const start = new Position(index, m.index);
+                        const end = new Position(index, m.index + m[1].length);
+                        const diagnostic = new Diagnostic(new Range(start, end), 'Command "' + m[1] + '" is not supported by current device', DiagnosticSeverity.Error);
                         diagnostics.push(diagnostic);
                     } else {
                         // TODO find a propper regex if possible
@@ -140,13 +142,13 @@ export class LEDBasicCodeValidator {
                         args = args.substr(1, args.length - 2);
 
                         // detect if arguments contain a read call
-                        let readCalls = args.split('read ').length - 1;
+                        const readCalls = args.split('read ').length - 1;
                         let ac = args ? args.split(',').length : 0;
                         ac = ac - readCalls;
                         if (ac !== cmd.argcount) {
-                            let start = new Position(index, m.index);
-                            let end = new Position(index, m.index + m[1].length);
-                            let diagnostic = new Diagnostic(new Range(start, end), 'Command "' + m[1] + '" has wrong number of arguments', DiagnosticSeverity.Error);
+                            const start = new Position(index, m.index);
+                            const end = new Position(index, m.index + m[1].length);
+                            const diagnostic = new Diagnostic(new Range(start, end), 'Command "' + m[1] + '" has wrong number of arguments', DiagnosticSeverity.Error);
                             diagnostics.push(diagnostic);
                         }
                     }
@@ -154,7 +156,7 @@ export class LEDBasicCodeValidator {
             }
 
             if (diagnostics.length) {
-                this._diagnosticCollection.set(doc.uri, diagnostics);
+                this.diagnosticCollection.set(doc.uri, diagnostics);
                 return false;
             }
 

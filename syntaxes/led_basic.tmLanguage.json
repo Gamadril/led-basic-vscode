@@ -8,7 +8,7 @@
 			"comment": "Libraries",
 			"patterns": [{
 				"name": "keyword.control.led_basic",
-				"match": "\\b(?i)(IO|LED)\\b"
+				"match": "\\b(?i)(IO|LED|MATRIX)\\b"
 			}]
 		},
 		{
@@ -34,7 +34,7 @@
 		{
 			"comment": "Variables",
 			"patterns": [{
-				"match": "\\b([a-zA-Z])\\b",
+				"match": "\\b([a-zA-Z][a-zA-Z0-9_]*)\\b",
 				"captures": {
 					"1": {
 						"name": "variable.other.led_basic"
@@ -64,7 +64,7 @@
 	"repository": {
 		"labels": {
 			"patterns": [{
-				"match": "^\\s*([0-9]+)(:)(.*)$",
+				"match": "^\\s*([a-zA-Z0-9_]+)(:)(.*)$",
 				"captures": {
 					"1": {
 						"name": "keyword.other.special-method.led_basic"

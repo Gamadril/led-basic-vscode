@@ -1,78 +1,93 @@
 'use strict';
+// tslint:disable: no-unused-expression no-console
 
-const SP = require("../blp-serial");
-const USB_SP = require("../blp-serial-usb");
+const SP = require('../blp-serial');
 
 import { Disposable } from 'vscode';
-//import { dump } from './utils';
-import { ISerialPortOptions, ISerialPort, ISerialPortInfo } from './Common';
+// import { dump } from './utils';
+import { ISerialPort, ISerialPortInfo, ISerialPortOptions } from './Common';
 
 const DEBUG = false;
 const DEFAULT_READ_TIMEOUT = 2000;
 const BUFFER_SIZE = 1024;
 
 export class SerialPort implements ISerialPort, Disposable {
-    private _dataTimeout: number = 0;
-    private _readCallTimerId: NodeJS.Timer | null = null;
-    private _currentErrorCallback: any;
-    private _inDataQueue: Uint8Array;
-    private _inDataQueueOffset: number = 0;
-    private _onResult: ((data: Uint8Array) => void) | null = null;
-    private _port: any;
-    private _portName: string;
+
+    public static list(): Promise<ISerialPortInfo[]> {
+        return new Promise((resolve, reject) => {
+            SP.list()
+                .then((foundPorts: any[]) => {
+                    const ports: ISerialPortInfo[] = foundPorts.map((port: any) => {
+                        return {
+                            serialNumber: port.serialNumber,
+                            name: port.comName,
+                            deviceName: port.deviceName,
+                            sysCode: port.bcdDevice
+                        };
+                    });
+                    resolve(ports);
+                })
+                .catch(reject);
+        });
+    }
+
+    private dataTimeout: number = 0;
+    private readCallTimerId: NodeJS.Timer | null = null;
+    private currentErrorCallback: any;
+    private inDataQueue: Uint8Array;
+    private inDataQueueOffset: number = 0;
+    private onResult: ((data: Uint8Array) => void) | null = null;
+    private port: any;
+    private portName: string;
 
     constructor(port: string, options?: ISerialPortOptions) {
         options = options || {
             baudRate: 9600,
         };
-        this._portName = port;
+        this.portName = port;
         options.autoOpen = false;
         options.hupcl = false;
 
-        if (this._portName.startsWith('usb')) {
-            this._port = new USB_SP(this._portName, options);
-        } else {
-            this._port = new SP(this._portName, options);
-        }
+        this.port = new SP(this.portName, options);
 
-        this._inDataQueue = new Uint8Array(BUFFER_SIZE);
+        this.inDataQueue = new Uint8Array(BUFFER_SIZE);
 
-        this._port.on('data', (data: Buffer) => {
+        this.port.on('data', (data: Buffer) => {
             DEBUG && console.log('[SERIAL] received ' + data.byteLength + ' bytes');
-            //DEBUG && console.log('[SERIAL] <\n' + dump(data));
-            if (this._inDataQueueOffset && !this._dataTimeout) {
+            // DEBUG && console.log('[SERIAL] <\n' + dump(data));
+            if (this.inDataQueueOffset && !this.dataTimeout) {
                 DEBUG && console.log('[SERIAL] CB - queue not empty, add new data to it');
-                this._inDataQueue.set(new Uint8Array(data), this._inDataQueueOffset);
-                this._inDataQueueOffset += data.byteLength;
-            } else if (this._onResult) {
-                if (this._dataTimeout) {
+                this.inDataQueue.set(new Uint8Array(data), this.inDataQueueOffset);
+                this.inDataQueueOffset += data.byteLength;
+            } else if (this.onResult) {
+                if (this.dataTimeout) {
                     DEBUG && console.log('[SERIAL] CB - has a data timeout. pushing data to queue');
-                    this._inDataQueue.set(new Uint8Array(data), this._inDataQueueOffset);
-                    this._inDataQueueOffset += data.byteLength;
+                    this.inDataQueue.set(new Uint8Array(data), this.inDataQueueOffset);
+                    this.inDataQueueOffset += data.byteLength;
                 } else {
                     DEBUG && console.log('[SERIAL] CB - calling callback function directly');
-                    this._onResult(new Uint8Array(data));
+                    this.onResult(new Uint8Array(data));
                 }
             } else {
                 DEBUG && console.log('[SERIAL] CB - got data without read requested. pushing to queue');
-                this._inDataQueue.set(new Uint8Array(data), this._inDataQueueOffset);
-                this._inDataQueueOffset += data.byteLength;
+                this.inDataQueue.set(new Uint8Array(data), this.inDataQueueOffset);
+                this.inDataQueueOffset += data.byteLength;
             }
         });
 
-        this._port.on('error', (error: Error) => {
+        this.port.on('error', (error: Error) => {
             DEBUG && console.log('[SERIAL] error: ' + error.message);
-            if (this._currentErrorCallback) {
-                this._currentErrorCallback(error);
+            if (this.currentErrorCallback) {
+                this.currentErrorCallback(error);
             }
         });
     }
 
-    open(): Promise<void> {
+    public open(): Promise<void> {
         return new Promise((resolve, reject) => {
-            DEBUG && console.log('[SERIAL] open ' + this._portName);
+            DEBUG && console.log('[SERIAL] open ' + this.portName);
 
-            this._port.open((error: any) => {
+            this.port.open((error: any) => {
                 if (error) {
                     DEBUG && console.log('[SERIAL] error opening:', error.message);
                     reject(error);
@@ -84,7 +99,7 @@ export class SerialPort implements ISerialPort, Disposable {
         });
     }
 
-    openForUpload(brk?: boolean, dtr?: boolean): Promise<void> {
+    public openForUpload(brk?: boolean, dtr?: boolean): Promise<void> {
         return new Promise((resolve, reject) => {
             DEBUG && console.log('[SERIAL] openForUpload with BRK:', brk, ', DTR:', dtr);
             this.open()
@@ -104,11 +119,11 @@ export class SerialPort implements ISerialPort, Disposable {
                     DEBUG && console.log('[SERIAL] openForUpload resolving');
                     resolve();
                 })
-                .catch(reject)
+                .catch(reject);
         });
     }
 
-    toggleBRK(): Promise<void> {
+    public toggleBRK(): Promise<void> {
         return new Promise((resolve, reject) => {
             DEBUG && console.log('[SERIAL] toggle BRK');
             this.setOptions({ brk: true, dtr: false })
@@ -116,11 +131,11 @@ export class SerialPort implements ISerialPort, Disposable {
                     return this.setOptions({ brk: false, dtr: false });
                 })
                 .then(resolve)
-                .catch(reject)
+                .catch(reject);
         });
     }
 
-    toggleDTR(): Promise<void> {
+    public toggleDTR(): Promise<void> {
         return new Promise((resolve, reject) => {
             DEBUG && console.log('[SERIAL] toggle DTR');
             this.setOptions({ dtr: true })
@@ -128,20 +143,20 @@ export class SerialPort implements ISerialPort, Disposable {
                     return this.setOptions({ dtr: false });
                 })
                 .then(resolve)
-                .catch(reject)
+                .catch(reject);
         });
     }
 
-    close(): Promise<void> {
+    public close(): Promise<void> {
         return new Promise((resolve, reject) => {
             DEBUG && console.log('[SERIAL] close');
-            this._inDataQueueOffset = 0;
-            this._onResult = null;
-            this._readCallTimerId = null;
-            this._dataTimeout = 0;
-            this._currentErrorCallback = null;
+            this.inDataQueueOffset = 0;
+            this.onResult = null;
+            this.readCallTimerId = null;
+            this.dataTimeout = 0;
+            this.currentErrorCallback = null;
 
-            this._port.close((error: Error) => {
+            this.port.close((error: Error) => {
                 if (error) {
                     DEBUG && console.log('[SERIAL] error closing: ' + error.message);
                     reject(error);
@@ -153,52 +168,36 @@ export class SerialPort implements ISerialPort, Disposable {
         });
     }
 
-    setReadListener(onData: ((data: Uint8Array) => void) | null) {
-        this._onResult = onData;
+    public setReadListener(onData: ((data: Uint8Array) => void) | null) {
+        this.onResult = onData;
     }
 
-    private setReadTimeout(onTimeout: (data: Uint8Array) => void, onError: (error: Error) => void) {
-        this._readCallTimerId = setTimeout(() => {
-            this._readCallTimerId = null;
-            this._onResult = null;
-            let result = this._inDataQueue.slice(0, this._inDataQueueOffset);
-            this._inDataQueueOffset = 0;
-            if (this._dataTimeout) {
-                DEBUG && console.log('[SERIAL] read timed out expectedly. resolving.');
-                onTimeout(result);
-            } else {
-                DEBUG && console.log('[SERIAL] read timed out unexpectedly. rejecting.');
-                onError(new Error('Device is not reponding. Check if you\'ve selected the right target device and correct serial port.'));
-            }
-        }, this._dataTimeout ? this._dataTimeout : DEFAULT_READ_TIMEOUT);
-    }
-
-    read(dataTimeout?: number): Promise<Uint8Array> {
+    public read(dataTimeout?: number): Promise<Uint8Array> {
         return new Promise((resolve, reject) => {
             DEBUG && console.log('[SERIAL] read');
             if (!this.isOpen()) {
                 DEBUG && console.log('[SERIAL] read - not opened');
                 reject(new Error('Serial Port is closed'));
-            } else if (this._readCallTimerId) {
+            } else if (this.readCallTimerId) {
                 DEBUG && console.log('[SERIAL] read in progress');
                 reject(new Error('Previous read operation still waiting for data'));
             } else {
-                this._dataTimeout = dataTimeout || 0;
-                if (this._inDataQueueOffset && !dataTimeout) {
-                    let data = this._inDataQueue.slice(0, this._inDataQueueOffset);
-                    this._inDataQueueOffset = 0;
+                this.dataTimeout = dataTimeout || 0;
+                if (this.inDataQueueOffset && !dataTimeout) {
+                    const data = this.inDataQueue.slice(0, this.inDataQueueOffset);
+                    this.inDataQueueOffset = 0;
                     DEBUG && console.log('[SERIAL] read got data from queue');
                     resolve(data);
                 } else {
-                    this._onResult = (data: Uint8Array) => {
+                    this.onResult = (data: Uint8Array) => {
                         DEBUG && console.log('[SERIAL] read called from read CB');
-                        if (this._readCallTimerId) {
-                            clearTimeout(this._readCallTimerId);
-                            this._readCallTimerId = null;
+                        if (this.readCallTimerId) {
+                            clearTimeout(this.readCallTimerId);
+                            this.readCallTimerId = null;
                         }
-                        this._onResult = null;
+                        this.onResult = null;
                         resolve(data);
-                    }
+                    };
 
                     this.setReadTimeout((data: Uint8Array) => {
                         resolve(data);
@@ -210,11 +209,11 @@ export class SerialPort implements ISerialPort, Disposable {
         });
     }
 
-    write(data: Uint8Array): Promise<void> {
+    public write(data: Uint8Array): Promise<void> {
         return new Promise((resolve, reject) => {
             DEBUG && console.log('[SERIAL] write');
-            //DEBUG && console.log('[SERIAL] >\n' + dump(data));
-            this._port.write(Buffer.from(data.buffer as ArrayBuffer), null, (error: Error) => {
+            // DEBUG && console.log('[SERIAL] >\n' + dump(data));
+            this.port.write(Buffer.from(data.buffer as ArrayBuffer), null, (error: Error) => {
                 if (error) {
                     DEBUG && console.log('[SERIAL] error writing: ' + error.message);
                     reject(error.message);
@@ -226,10 +225,10 @@ export class SerialPort implements ISerialPort, Disposable {
         });
     }
 
-    setOptions(options: any): Promise<void> {
+    public setOptions(options: any): Promise<void> {
         return new Promise((resolve, reject) => {
             DEBUG && console.log('[SERIAL] set options');
-            this._port.set(options, (error: any) => {
+            this.port.set(options, (error: any) => {
                 if (error) {
                     DEBUG && console.log('[SERIAL] set options error: ' + error.message);
                     reject(error.message);
@@ -237,57 +236,36 @@ export class SerialPort implements ISerialPort, Disposable {
                     DEBUG && console.log('[SERIAL] options set');
                     setTimeout(() => {
                         resolve();
-                    }, 20)
+                    }, 20);
                 }
             });
         });
     }
 
-    isOpen(): boolean {
-        return this._port && this._port.isOpen;
+    public isOpen(): boolean {
+        return this.port && this.port.isOpen;
     }
 
-    dispose() {
+    public dispose() {
         if (this.isOpen()) {
-            this._port.close();
+            this.port.close();
         }
-        this._port = null;
+        this.port = null;
     }
 
-    static list(): Promise<ISerialPortInfo[]> {
-        return new Promise((resolve, reject) => {
-            let allPorts: ISerialPortInfo[] = [];
-            SP.list()
-                .then((foundPorts: Array<any>) => {
-                    let ports: ISerialPortInfo[] = foundPorts.map((port: any) => {
-                        return {
-                            serialNumber: port.serialNumber,
-                            name: port.comName,
-                            deviceName: port.deviceName,
-                            sysCode: port.bcdDevice
-                        }
-                    });
-                    allPorts = allPorts.concat(ports);
-
-                    if (process.platform !== 'win32') {
-                        return Promise.resolve([]);
-                    } else {
-                        return USB_SP.list();
-                    }
-                })
-                .then((foundPorts: Array<any>) => {
-                    let ports: ISerialPortInfo[] = foundPorts.map((port: any) => {
-                        return {
-                            serialNumber: port.serialNumber,
-                            name: port.comName,
-                            deviceName: port.deviceName,
-                            sysCode: port.bcdDevice
-                        }
-                    });
-                    allPorts = allPorts.concat(ports);
-                    resolve(allPorts);
-                })
-                .catch(reject);
-        });
+    private setReadTimeout(onTimeout: (data: Uint8Array) => void, onError: (error: Error) => void) {
+        this.readCallTimerId = setTimeout(() => {
+            this.readCallTimerId = null;
+            this.onResult = null;
+            const result = this.inDataQueue.slice(0, this.inDataQueueOffset);
+            this.inDataQueueOffset = 0;
+            if (this.dataTimeout) {
+                DEBUG && console.log('[SERIAL] read timed out expectedly. resolving.');
+                onTimeout(result);
+            } else {
+                DEBUG && console.log('[SERIAL] read timed out unexpectedly. rejecting.');
+                onError(new Error('Device is not reponding. Check if you\'ve selected the right target device and correct serial port.'));
+            }
+        }, this.dataTimeout ? this.dataTimeout : DEFAULT_READ_TIMEOUT);
     }
 }

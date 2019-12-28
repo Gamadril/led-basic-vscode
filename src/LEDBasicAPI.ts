@@ -1,120 +1,206 @@
 'use strict';
 
-export interface IParam { name: string, description: string }
-export interface IEntry { description: string; signature: string; parameters?: IParam[] }
+export interface IParam { name: string; description: string; }
+export interface IEntry { description: string; signature: string; parameters?: IParam[]; }
 export interface IEntries { [name: string]: IEntry; }
 export interface ILibEntries { [name: string]: IEntries; }
 
 const led = {
-    name: "led",
+    name: 'led',
     description: 'Index of the LED. [0..MAX_LEDS-1]'
 };
 
 const idx = {
-    name: "idx",
+    name: 'idx',
     description: 'Index of the register. [0..9]'
 };
 
 const red = {
-    name: "r",
-    description: "Red component of the colour. [0..255]"
+    name: 'r',
+    description: 'Red component of the colour. [0..255]'
 };
 
 const green = {
-    name: "g",
-    description: "Green component of the colour. [0..255]"
+    name: 'g',
+    description: 'Green component of the colour. [0..255]'
 };
 
 const blue = {
-    name: "b",
-    description: "Blue component of the colour. [0..255]"
+    name: 'b',
+    description: 'Blue component of the colour. [0..255]'
 };
 
 const hue = {
-    name: "h",
-    description: "Hue component of the colour. [0..359]"
+    name: 'h',
+    description: 'Hue component of the colour. [0..359]'
 };
 
 const saturation = {
-    name: "s",
-    description: "Saturation component of the colour. [0..255]"
+    name: 's',
+    description: 'Saturation component of the colour. [0..255]'
 };
 
 const value = {
-    name: "v",
-    description: "Value component of the colour. [0..255]"
+    name: 'v',
+    description: 'Value component of the colour. [0..255]'
 };
 
 const start = {
-    name: "beg",
-    description: "Start index of the range. [0..MAX_LEDS-1]"
+    name: 'beg',
+    description: 'Start index of the range. [0..MAX_LEDS-1]'
 };
 
 const end = {
-    name: "end",
-    description: "End index of the range. [beg..MAX_LEDS-1]"
+    name: 'end',
+    description: 'End index of the range. [beg..MAX_LEDS-1]'
 };
 
 const inc = {
-    name: "inc",
-    description: "Defines the incremental step for the effect. [0..100]"
+    name: 'inc',
+    description: 'Defines the incremental step for the effect. [0..100]'
 };
 
 const from = {
-    name: "from",
-    description: "Source LED index. [0..MAX_LEDS-1]"
+    name: 'from',
+    description: 'Source LED index. [0..MAX_LEDS-1]'
 };
 
 const to = {
-    name: "to",
-    description: "Destination LED index. [0..MAX_LEDS-1]"
+    name: 'to',
+    description: 'Destination LED index. [0..MAX_LEDS-1]'
 };
 
 const count = {
-    name: "count",
-    description: "Number of copies to make. [1..x]"
+    name: 'count',
+    description: 'Number of copies to make. [1..x]'
 };
 
 const colour = {
-    name: "colour",
-    description: "Colour value. [0..7]  0-OFF  1-Red  2-Green  3-Yellow  4-Blue  5-Magenta  6-Cyan  7-White"
+    name: 'colour',
+    description: 'Colour value. [0..7]  0-OFF  1-Red  2-Green  3-Yellow  4-Blue  5-Magenta  6-Cyan  7-White'
 };
 
 const pos = {
-    name: "pos",
-    description: "Position on the display. [0..3]"
+    name: 'pos',
+    description: 'Position on the display. [0..3]'
 };
 
 const num = {
-    name: "value",
-    description: "Value to display. [0..65536]"
-}
+    name: 'value',
+    description: 'Value to display. [0..65536]'
+};
 
 const width = {
-    name: "width",
-    description: "Number of places to use + 1. [0..3]"
-}
+    name: 'width',
+    description: 'Number of places to use + 1. [0..3]'
+};
+
+const x = {
+    name: 'x',
+    description: 'X coordinate'
+};
+
+const y = {
+    name: 'y',
+    description: 'Y coordinate'
+};
+
+const x0 = {
+    name: 'x',
+    description: 'X coordinate of the starting point'
+};
+
+const y0 = {
+    name: 'y',
+    description: 'Y coordinate of the starting point'
+};
+
+const x1 = {
+    name: 'x',
+    description: 'X coordinate of the end point'
+};
+
+const y1 = {
+    name: 'y',
+    description: 'Y coordinate of the end point'
+};
+
+const r = {
+    name: 'r',
+    description: 'Radius'
+};
+
+const col = {
+    name: 'col',
+    description: 'Component dependent value. Might be the brightness of single color LED or a color register index'
+};
+
+const fill = {
+    name: 'fill',
+    description: 'Defines if the area should be filled or not. fill = 1 - filled, fill = 0 - not'
+};
+
+const dir = {
+    name: 'dir',
+    description: 'Direction to shift to: 0: left, 1: right, 2: up, 3: down'
+};
+
+const cnt = {
+    name: 'cnt',
+    description: 'Number of units to apply'
+};
+
+const font = {
+    name: 'font',
+    description: 'Font. Component dependent value.'
+};
+
+const frame = {
+    name: 'frame',
+    description: 'Frame index.'
+};
+
+const opt = {
+    name: 'opt',
+    description: 'Component dependent value.'
+};
+
+const res1 = {
+    name: 'res1',
+    description: 'Reserved.'
+};
+
+const res2 = {
+    name: 'res2',
+    description: 'Reserved.'
+};
+
+const mi = {
+    name: 'mi',
+    description: 'Matrix index.'
+};
 
 function pchar(name?: string): IParam {
-    let result: IParam = {
+    const result: IParam = {
         name: name || 'char',
-        description: "Value of the character. [0..29]\n\n|value|character|value|character|value|character|\n|---|---|---|---|---|---|\n|0|0|10|A|20|-|\n|1|1|11|b|21| |\n|2|2|12|C|22|i|\n|3|3|13|d|23|n|\n|4|4|14|E|24|r|\n|5|5|15|F|25|N|\n|6|6|16|H|26|t|\n|7|7|17|L|27|o|\n|8|8|18|P|28|G|\n|9|9|19|U|29|Y|"
+        description: 'Value of the character. [0..29]\n\n|value|character|value|character|value|character|\n|---|---|---|---|---|---|\n|0|0|10|A|20|-|\n|1|1|11|b|21| |\n|2|2|12|C|22|i|\n|3|3|13|d|23|n|\n|4|4|14|E|24|r|\n|5|5|15|F|25|N|\n|6|6|16|H|26|t|\n|7|7|17|L|27|o|\n|8|8|18|P|28|G|\n|9|9|19|U|29|Y|'
     };
     return result;
 }
 
 function praw(name?: string): IParam {
-    let result: IParam = {
+    const result: IParam = {
         name: name || 'raw',
-        description: "Segments to be turned on bitwise. [0..127]\n\n![](res/segment.png)\n\nA=0x01, B=0x02, C=0x04, D=0x08, E=0x10, F=0x20, G=0x40"
+        description: 'Segments to be turned on bitwise. [0..127]\n\n![](res/segment.png)\n\nA=0x01, B=0x02, C=0x04, D=0x08, E=0x10, F=0x20, G=0x40'
     };
     return result;
 }
 
+// tslint:disable-next-line: variable-name
 const rtc_idx = {
-    name: "idx",
-    description: "|idx|component|range|\n|:---:|:---|:---|\n|0|second|0..59|\n|1|minute|0..59|\n|2|hour|0..23|\n|3|day|1..28/29/30/31|\n|4|month|1..12|\n|5|year|2000..20XX|\n|6|day of year|1..365/366|\n|7|day of week|0..6|\n|8|leap-year|0=no, 1=yes|"
-}
+    name: 'idx',
+    description: '|idx|component|range|\n|:---:|:---|:---|\n|0|second|0..59|\n|1|minute|0..59|\n|2|hour|0..23|\n|3|day|1..28/29/30/31|\n|4|month|1..12|\n|5|year|2000..20XX|\n|6|day of year|1..365/366|\n|7|day of week|0..6|\n|8|leap-year|0=no, 1=yes|'
+};
 
 const char = pchar();
 const ch1 = pchar('ch1');
@@ -132,17 +218,17 @@ const raw4 = praw('raw4');
  * List of API functions for code completion
  */
 export const API: ILibEntries = {
-    'BUILTIN': {
+    BUILTIN: {
         '###': {
             signature: '### Lxxx Cxxxy Mxxx Px Sx Tx Ax Fxx',
-            description: 'Various global settings can be set via this configuration line. Please note that not every LED-Basic component supports all the parameters. Unsupported parameters are ignored. This line must be placed at the beginning of the BASIC code, otherwise the program will use the default values\n\n|Parameter|Description|Default|\n|---|---|---|\n|Lxxx|Number of connected LEDs (MAX_LEDS) [8..x]|L256, L128, L64|\n|Cxxxy|Colour order of the LEDs. GRB=WS2812, RGB=SK6812,APA102,APA106. CRGBW for RGBW LEDs|CGRB|\n|Mxxx|Master LED brightness in % [5..100]|M100|\n|Px|Print output on/off. 0=off, 1=on|P1|\n|Sx|Setup system LEDs. 0=off, 1=Output LED on, 2=Wait LED on, 3=All on|S3|\n|Tx|LED-type selection. Component dependent|T0|\n|Ax|SPI bitrate for suitable LED types [0..7]|A3|\n|Fxx|LED update framerate [0..100]|F25|'
+            description: 'Various global settings can be set via this configuration line. Please note that not every LED-Basic component supports all the parameters. Unsupported parameters are ignored. This line must be placed at the beginning of the BASIC code, otherwise the program will use the default values\n\n|Parameter|Description|Default|\n|---|---|---|\n|Lxxx|Number of connected LEDs (MAX_LEDS) [8..x]|L256, L128, L64|\n|Cxxxy|Colour order of the LEDs. GRB=WS2812, RGB=SK6812,APA102,APA106. CRGBW for RGBW LEDs|CGRB|\n|Mxxx|Master LED brightness in % [1..100]|M100|\n|Px|Print output on/off. 0=off, 1=on|P1|\n|Sx|Setup system LEDs. 0=off, 1=Output LED on, 2=Wait LED on, 3=All on|S3|\n|Tx|LED-type selection. Component dependent|T0|\n|Ax|SPI bitrate for suitable LED types [0..7]|A3|\n|Fxx|LED update framerate [0..100]|F25|'
         },
         'random': {
-            signature: "random",
+            signature: 'random',
             description: 'Generates a positive random number between 0 and 32767.'
         },
         'delay': {
-            signature: "delay <VAL|EXPR|VAR>",
+            signature: 'delay <VAL|EXPR|VAR>',
             description: 'Stops the execution of the program for a period of time in milliseconds. The value must be in range 1 - 32767 (equivalent to approximately 32.8 seconds).'
         },
         'print': {
@@ -157,12 +243,12 @@ export const API: ILibEntries = {
             description: 'The **read** command accesses individual **data** values. First parameter is the label with data, second parameter is the index of the value to read.\nIf the program attempts to read past the last data value, no error is returned; read simply returns 0.',
             signature: 'read <VAL>,<VAL|EXPR|VAR>'
         },
-        'end': {
-            description: 'All commands behind **end** are ignored.',
-            signature: 'let <VAR>=<VAL|EXPR|VAR>'
-        },
         'let': {
             description: 'Assigns a value to a variable. **let** is optional and can be omitted.',
+            signature: 'let <VAR>=<VAL|EXPR|VAR>'
+        },
+        'end': {
+            description: 'All commands behind **end** are ignored.',
             signature: 'end'
         },
         'for': {
@@ -182,296 +268,360 @@ export const API: ILibEntries = {
             signature: 'goto <VAL>'
         }
     },
-    'LED': {
-        'show': {
-            signature: "LED.show()",
-            description: "The LEDs are displayed. Due to data transmission speeds, it takes 40ms (25 frames/second) for all to be displayed. Execution is therefore automatically limited to this speed. No LED display is possible without this command.",
+    LED: {
+        show: {
+            signature: 'LED.show()',
+            description: 'The LEDs are displayed. Due to data transmission speeds, it takes 40ms (25 frames/second) for all to be displayed. Execution is therefore automatically limited to this speed. No LED display is possible without this command.',
             parameters: []
         },
-        'lrgb': {
-            signature: "LED.lrgb(led, r, g, b)",
-            description: "LED at position **led** is set with values in **r**, **g** and **b**.",
+        lrgb: {
+            signature: 'LED.lrgb(led, r, g, b)',
+            description: 'LED at position **led** is set with values in **r**, **g** and **b**.',
             parameters: [led, red, green, blue]
         },
-        'lhsv': {
-            signature: "LED.lhsv(led, h, s, v)",
-            description: "LED at position **led** is set with values **h**, **s** and **v**.",
+        lhsv: {
+            signature: 'LED.lhsv(led, h, s, v)',
+            description: 'LED at position **led** is set with values **h**, **s** and **v**.',
             parameters: [led, hue, saturation, value]
         },
-        'irgb': {
-            signature: "LED.irgb(idx, r, g, b)",
-            description: "Up to 10 LED colour presets can be stored in index registers. Colour index **idx** is set based on the values in **r**, **g** and **b**.",
+        irgb: {
+            signature: 'LED.irgb(idx, r, g, b)',
+            description: 'Up to 10 LED colour presets can be stored in index registers. Colour index **idx** is set based on the values in **r**, **g** and **b**.',
             parameters: [idx, red, green, blue]
         },
-        'ihsv': {
-            signature: "LED.ihsv(idx, h, s, v)",
-            description: "Up to 10 LED colour presets can be stored in index registers. Colour index **idx** is set based on the values in **h**, **s** and **v**.",
+        ihsv: {
+            signature: 'LED.ihsv(idx, h, s, v)',
+            description: 'Up to 10 LED colour presets can be stored in index registers. Colour index **idx** is set based on the values in **h**, **s** and **v**.',
             parameters: [idx, hue, saturation, value]
         },
-        'iled': {
-            signature: "LED.iled(idx, led)",
-            description: "LED at position **led** is displayed with the preset colour values in **idx**.",
+        iled: {
+            signature: 'LED.iled(idx, led)',
+            description: 'LED at position **led** is displayed with the preset colour values in **idx**.',
             parameters: [idx, led]
         },
-        'iall': {
-            signature: "LED.iall(idx)",
-            description: "All LEDs are shown with the preset colour values in **idx**.",
+        iall: {
+            signature: 'LED.iall(idx)',
+            description: 'All LEDs are shown with the preset colour values in **idx**.',
             parameters: [idx]
         },
-        'irange': {
-            signature: "LED.irange(idx, beg, end)",
-            description: "The LEDs in the range of **beg** to **end** are shown with the preset colour value in **idx**.",
+        irange: {
+            signature: 'LED.irange(idx, beg, end)',
+            description: 'The LEDs in the range of **beg** to **end** are shown with the preset colour value in **idx**.',
             parameters: [idx, start, end]
         },
-        'rainbow': {
-            signature: "LED.rainbow(h, s, v, beg, end, inc)",
-            description: "A rainbow effect is applied to a set of LEDs defined by(**beg**..**end**). The start colour is defined by **h**, **s** and **v**. **inc** specifies the variation or gradient in colour between LEDs. If the value of **h** is continuously changed, the rainbow appears to move.",
+        rainbow: {
+            signature: 'LED.rainbow(h, s, v, beg, end, inc)',
+            description: 'A rainbow effect is applied to a set of LEDs defined by(**beg**..**end**). The start colour is defined by **h**, **s** and **v**. **inc** specifies the variation or gradient in colour between LEDs. If the value of **h** is continuously changed, the rainbow appears to move.',
             parameters: [hue, saturation, value, start, end, inc]
         },
-        'copy': {
-            signature: "LED.copy(from, to)",
-            description: "The colour of a single LED in position **from** is copied to the LED in position **to**. The LED at position **from** remains unchanged.",
+        copy: {
+            signature: 'LED.copy(from, to)',
+            description: 'The colour of a single LED in position **from** is copied to the LED in position **to**. The LED at position **from** remains unchanged.',
             parameters: [from, to]
         },
-        'repeat': {
-            signature: "LED.repeat(beg, end, count)",
-            description: "The LED area **beg** to **end** is repeated **count** times.",
+        repeat: {
+            signature: 'LED.repeat(beg, end, count)',
+            description: 'The LED area **beg** to **end** is repeated **count** times.',
             parameters: [start, end, count]
         },
-        'shift': {
-            signature: "LED.shift(beg, end, to)",
-            description: "The LED area **beg** to **end** is copied to after **to**.",
+        shift: {
+            signature: 'LED.shift(beg, end, to)',
+            description: 'The LED area **beg** to **end** is copied to after **to**.',
             parameters: [start, end, to]
         },
-        'mirror': {
-            signature: "LED.mirror(beg, end, to)",
-            description: "The LED area **beg** to **end** is mirrored after **to**. Care should be taken to ensure that areas **beg..end** and **to** do not overlap, to avoid undesirable effects.",
+        mirror: {
+            signature: 'LED.mirror(beg, end, to)',
+            description: 'The LED area **beg** to **end** is mirrored after **to**. Care should be taken to ensure that areas **beg..end** and **to** do not overlap, to avoid undesirable effects.',
             parameters: [start, end, to]
         },
-        'blackout': {
-            signature: "LED.blackout()",
-            description: "All LEDs are switched off. LED.show() is not required.",
+        blackout: {
+            signature: 'LED.blackout()',
+            description: 'All LEDs are switched off. LED.show() is not required.',
             parameters: []
         },
-        'setled': {
-            signature: "LED.setled(led, colour)",
-            description: "LED **led** will be set to colour **colour**",
+        setled: {
+            signature: 'LED.setled(led, colour)',
+            description: 'LED **led** will be set to colour **colour**',
             parameters: [led, colour]
         },
-        'setall': {
-            signature: "LED.setall(colour)",
-            description: "All LEDs are set to colour **colour**",
+        setall: {
+            signature: 'LED.setall(colour)',
+            description: 'All LEDs are set to colour **colour**',
             parameters: [colour]
         },
-        'bright': {
-            signature: "LED.bright(value)",
-            description: "Sets brightness of the LEDs or the display. Note: Brightness changes in the upper range are barely noticeable by the human eye but have a disproportionate effect on the LED's power consumption.",
+        bright: {
+            signature: 'LED.bright(value)',
+            description: 'Sets brightness of the LEDs or the display. Note: Brightness changes in the upper range are barely noticeable by the human eye but have a disproportionate effect on the LED\'s power consumption.',
             parameters: [{
-                name: "value",
-                description: "Brightness value."
+                name: 'value',
+                description: 'Brightness value.'
             }]
         },
-        'clear': {
-            signature: "LED.clear()",
-            description: "The display is cleared, all segements off. This command should not be put in a loop or the display will flicker.",
+        clear: {
+            signature: 'LED.clear()',
+            description: 'The display is cleared, all segements off. This command should not be put in a loop or the display will flicker.',
             parameters: []
         },
-        'pchar': {
-            signature: "LED.pchar(pos, char)",
-            description: "Puts the predefined character **char** in position **pos** (+1). **pos** specifies the 7-segment position at which the character is to be output, from left to right (0..3). The decimal point display remains unaffected.",
+        pchar: {
+            signature: 'LED.pchar(pos, char)',
+            description: 'Puts the predefined character **char** in position **pos** (+1). **pos** specifies the 7-segment position at which the character is to be output, from left to right (0..3). The decimal point display remains unaffected.',
             parameters: [pos, char]
         },
-        'achar': {
-            signature: "LED.achar(ch1, ch2, ch3, ch4)",
-            description: "Outputs all 4 characters at the same time. Values of all 4 characters must be specified.",
-            parameters: [ch1, ch2, ch3, ch4]
-        },
-        'praw': {
-            signature: "LED.praw(pos, raw)",
-            description: "Outputs the character in **raw** in position **pos** (+1). **pos** specifies the 7-segment position at which the character is to be output, from left to right (0..3). The decimal point display remains unaffected.",
+        praw: {
+            signature: 'LED.praw(pos, raw)',
+            description: 'Outputs the character in **raw** in position **pos** (+1). **pos** specifies the 7-segment position at which the character is to be output, from left to right (0..3). The decimal point display remains unaffected.',
             parameters: [pos, raw]
         },
-        'araw': {
-            signature: "LED.araw(raw1, raw2, raw3, raw4)",
-            description: "Outputs all 4 characters at the same time in raw mode. Values of all 4 characters must be specified.",
-            parameters: [raw1, raw2, raw3, raw4]
-        },
-        'adp': {
-            signature: "LED.adp(dp)",
-            description: "Sets the decimal point location via bit-code. All other segments display remains untouched.",
+        adp: {
+            signature: 'LED.adp(dp)',
+            description: 'Sets the decimal point location via bit-code. All other segments display remains untouched.',
             parameters: [{
-                name: "dp",
-                description: "Decimal point bit coded. Bit X = Position X. [0..255]"
+                name: 'dp',
+                description: 'Decimal point bit coded. Bit X = Position X. [0..255]'
             }]
         },
-        'phex': {
-            signature: "LED.phex(pos, value, width)",
-            description: "Outputs the value in **value** as hexadecimal on the display at position **pos** (+1). The value in **width** (+1) specifies the width of the output. The hexadecimal display always has 0 prefixes.",
+        phex: {
+            signature: 'LED.phex(pos, value, width)',
+            description: 'Outputs the value in **value** as hexadecimal on the display at position **pos** (+1). The value in **width** (+1) specifies the width of the output. The hexadecimal display always has 0 prefixes.',
             parameters: [pos, num, width]
         },
-        'pdez': {
-            signature: "LED.pdez(pos, value, width, lzero)",
-            description: "Outputs the value in **value** as a decimal number on the display at position **pos** (+1). The value in **width** (+1) specifies the width of the output. The value in **lzero** specifies whetever prefix 0s should be suppressed. If a value greater than 9999 is specified, the display is blank.",
+        pdez: {
+            signature: 'LED.pdez(pos, value, width, lzero)',
+            description: 'Outputs the value in **value** as a decimal number on the display at position **pos** (+1). The value in **width** (+1) specifies the width of the output. The value in **lzero** specifies whetever prefix 0s should be suppressed. If a value greater than 9999 is specified, the display is blank.',
             parameters: [pos, num, width, {
-                name: "lzero",
-                description: "Show leading zeros. 0 = no, 1 = yes"
+                name: 'lzero',
+                description: 'Show leading zeros. 0 = no, 1 = yes'
             }]
         },
-        'update': {
-            signature: "LED.update()",
-            description: "Updates the current state on 7-segment displays. This command should be only called after change of the display content.",
+        update: {
+            signature: 'LED.update()',
+            description: 'Updates the current state on 7-segment displays. This command should be only called after change of the display content.',
             parameters: []
+        },
+        achar: {
+            signature: 'LED.achar(ch1, ch2, ch3, ch4)',
+            description: 'Outputs all 4 characters at the same time. Values of all 4 characters must be specified.',
+            parameters: [ch1, ch2, ch3, ch4]
+        },
+        araw: {
+            signature: 'LED.araw(raw1, raw2, raw3, raw4)',
+            description: 'Outputs all 4 characters at the same time in raw mode. Values of all 4 characters must be specified.',
+            parameters: [raw1, raw2, raw3, raw4]
+        },
+
+    },
+    MATRIX: {
+        setxy: {
+            signature: 'MATRIX.setxy(x, y, col)',
+            description: 'Sets a single LED in the matrix at position **x**, **y**.',
+            parameters: [x, y, col]
+        },
+        line: {
+            signature: 'MATRIX.line(x0, y0, x1, y1, col)',
+            description: 'Creates a line between (x0,y0) and (x1,y1) coordinates.',
+            parameters: [x0, y0, x1, y1, col]
+        },
+        rect: {
+            signature: 'MATRIX.rect(x0, y0, x1, y1, fill, col)',
+            description: 'Creates a rectangle from (x0,y0) to (x1,y1).',
+            parameters: [x0, y0, x1, y1, fill, col]
+        },
+        circle: {
+            signature: 'MATRIX.circle(x, y, r, fill, col)',
+            description: 'Creates a circle at (x,y) with radius r.',
+            parameters: [x, y, r, fill, col]
+        },
+        shift: {
+            signature: 'MATRIX.shift(dir, cnt)',
+            description: 'Shifts the whole display content.',
+            parameters: [dir, cnt]
+        },
+        setfont: {
+            signature: 'MATRIX.setfont(font)',
+            description: 'Sets the font for the text.',
+            parameters: [font]
+        },
+        char: {
+            signature: 'MATRIX.char(x, y, char, col)',
+            description: 'Sets a single character at position **x**, **y**.',
+            parameters: [x, y, char, col]
+        },
+        pic: {
+            signature: 'MATRIX.pic(frame, opt)',
+            description: 'Shows the selected frame from the memory on the display',
+            parameters: [frame, opt]
+        },
+        size: {
+            signature: 'MATRIX.size(x, y, cnt, res1, res2)',
+            description: 'Defines several matrices of specified size.',
+            parameters: [x, y, cnt, res1, res2]
+        },
+        select: {
+            signature: 'MATRIX.select(mi)',
+            description: 'Selects a matrix from the array to apply following matrix commands on it.',
+            parameters: [mi]
         }
     },
-    'IO': {
-        'waitkey': {
-            signature: "IO.waitkey()",
-            description: "Program waits for any key press. The WAIT LED flashes, unless disabled vias SX in the configuration line.",
+    IO: {
+        waitkey: {
+            signature: 'IO.waitkey()',
+            description: 'Program waits for any key press. The WAIT LED flashes, unless disabled vias SX in the configuration line.',
             parameters: []
         },
-        'getkey': {
-            signature: "IO.getkey()",
-            description: "Whilst the program is running, the status of buttons can be queried. The number of buttons depends on the component in use. The key press remains stored until a query has been made.",
+        getkey: {
+            signature: 'IO.getkey()',
+            description: 'Whilst the program is running, the status of buttons can be queried. The number of buttons depends on the component in use. The key press remains stored until a query has been made.',
             parameters: []
         },
-        'keystate': {
-            signature: "IO.keystate()",
-            description: "Returns bit coded value indicating all pressed buttons.",
+        keystate: {
+            signature: 'IO.keystate()',
+            description: 'Returns bit coded value indicating all pressed buttons.',
             parameters: []
         },
-        'setport': {
-            signature: "IO.setport(port)",
-            description: "Sets the output ports to HIGH level. The value in **port** specifies whic of the ports are affected.",
+        setport: {
+            signature: 'IO.setport(port)',
+            description: 'Sets the output ports to HIGH level. The value in **port** specifies whic of the ports are affected.',
             parameters: [{
-                name: "port",
-                description: "Bit coded value for the port(s). Port 1 = Bit 0, Port 2 = Bit 1, etc."
+                name: 'port',
+                description: 'Bit coded value for the port(s). Port 1 = Bit 0, Port 2 = Bit 1, etc.'
             }]
         },
-        'clrport': {
-            signature: "IO.clrport(port)",
-            description: "Sets the output ports to LOW level. The value in **port** specifies whic of the ports are affected.",
+        clrport: {
+            signature: 'IO.clrport(port)',
+            description: 'Sets the output ports to LOW level. The value in **port** specifies whic of the ports are affected.',
             parameters: [{
-                name: "port",
-                description: "Bit coded value for the port(s). Port 1 = Bit 0, Port 2 = Bit 1, etc."
+                name: 'port',
+                description: 'Bit coded value for the port(s). Port 1 = Bit 0, Port 2 = Bit 1, etc.'
             }]
         },
-        'getrtc': {
-            signature: "IO.getrtc(idx)",
-            description: "Reads the values of the real-time clock (RTC) module (if available).",
+        getrtc: {
+            signature: 'IO.getrtc(idx)',
+            description: 'Reads the values of the real-time clock (RTC) module (if available).',
             parameters: [rtc_idx]
         },
-        'setrtc': {
-            signature: "IO.getrtc(idx, val)",
-            description: "Sets the real-time clock (RTC) (if available). If you want to write multiple values starting with the lowest **idx**, it is useful to first read the desired value, change it and then write it again.",
+        setrtc: {
+            signature: 'IO.getrtc(idx, val)',
+            description: 'Sets the real-time clock (RTC) (if available). If you want to write multiple values starting with the lowest **idx**, it is useful to first read the desired value, change it and then write it again.',
             parameters: [rtc_idx,
                 {
-                    name: "val",
-                    description: "Value to set for the component."
+                    name: 'val',
+                    description: 'Value to set for the component.'
                 }]
         },
-        'getldr': {
-            signature: "IO.getldr()",
-            description: "Reads the value of the LDR sensor (if present). The result is in range [0..255]",
+        getldr: {
+            signature: 'IO.getldr()',
+            description: 'Reads the value of the LDR sensor (if present). The result is in range [0..255]',
             parameters: []
         },
-        'getir': {
-            signature: "IO.getir()",
-            description: "Reads the value of the IR receiver (if present). The first byte of the result contains the number of repetitions caused by long-pressing the button. The last byte contains the key value. 0 means that there is no data.",
+        getir: {
+            signature: 'IO.getir()',
+            description: 'Reads the value of the IR receiver (if present). The first byte of the result contains the number of repetitions caused by long-pressing the button. The last byte contains the key value. 0 means that there is no data.',
             parameters: []
         },
-        'gettemp': {
-            signature: "IO.gettemp()",
-            description: "Reads the value of the DS18B20 sensor (if present). Result is a value in 0.1°c resolution. Due to the relatively long duration of the scan, the query should not be made at shorter intervals than 1 second. The sensor's measurement process is only started by reading a value, so the first value read should be discarded. Examples: 0=0°C, 217=21.7°C, 81=8.1°C",
+        gettemp: {
+            signature: 'IO.gettemp()',
+            description: 'Reads the value of the DS18B20 sensor (if present). Result is a value in 0.1°c resolution. Due to the relatively long duration of the scan, the query should not be made at shorter intervals than 1 second. The sensor\'s measurement process is only started by reading a value, so the first value read should be discarded. Examples: 0=0°C, 217=21.7°C, 81=8.1°C',
             parameters: []
         },
-        'xtempcnt': {
-            signature: "IO.xtempcnt()",
-            description: "Returns the number of detected temperature sensors.",
+        xtempcnt: {
+            signature: 'IO.xtempcnt()',
+            description: 'Returns the number of detected temperature sensors.',
             parameters: []
         },
-        'xtempval': {
-            signature: "IO.xtempval(nr, idx)",
-            description: "Reads different parameters from DS18B20 sensors (if present).",
+        xtempval: {
+            signature: 'IO.xtempval(nr, idx)',
+            description: 'Reads different parameters from DS18B20 sensors (if present).',
             parameters: [{
-                name: "nr",
-                description: "Index of the sensor to read from. [0..X]"
+                name: 'nr',
+                description: 'Index of the sensor to read from. [0..X]'
             }, {
-                name: "idx",
-                description: "Parameter to read.\n\n|idx|returned result|\n|:---:|---|\n|0|0 = invalid temperature, 1 = valid temperature|\n|1|temperature with 0.1°C resolution|\n|2|0 = parasitic power supply, 1 = external power supply|\n|3..10|ROM-ID of the sensor|"
+                name: 'idx',
+                description: 'Parameter to read.\n\n|idx|returned result|\n|:---:|---|\n|0|0 = invalid temperature, 1 = valid temperature|\n|1|temperature with 0.1°C resolution|\n|2|0 = parasitic power supply, 1 = external power supply|\n|3..10|ROM-ID of the sensor|'
             }]
         },
-        'beep': {
-            signature: "IO.beep(val)",
-            description: "Generates a sound from the loudspeaker (if present). Frequencies below 200 Hz cannot be generated due to system conditions.",
+        beep: {
+            signature: 'IO.beep(val)',
+            description: 'Generates a sound from the loudspeaker (if present). Frequencies below 200 Hz cannot be generated due to system conditions.',
             parameters: [{
-                name: "val",
-                description: "|val|Meaning|\n|:---:|---|\n|0|Mute|\n|1..36|Notes|\n|200...|frequency = val Hz|\n\nThe following note values are allowed:\n\n|Val|Note|Val|Note|Val|Note|Val|Note|\n|:---:|---|:---:|---|:---:|---|:---:|---|\n|1|C2|10|A2|19|F3#|28|D4#|\n|2|C2#|11|A2#|20|G3|29|E4|\n|3|D2|12|H2|21|G3#|30|F4|\n|4|D2#|13|C3|22|A3|31|F4#|\n|5|E2|14|C3#|23|A3#|32|G4|\n|6|F2|15|D3|24|H3|33|G4#|\n|7|F2#|16|D3#|25|C4|34|A4|\n|8|G2|17|E3|26|C4#|35|A4#|\n|9|G2#|18|F3|27|D4|36|H4|\n"
+                name: 'val',
+                description: '|val|Meaning|\n|:---:|---|\n|0|Mute|\n|1..36|Notes|\n|200...|frequency = val Hz|\n\nThe following note values are allowed:\n\n|Val|Note|Val|Note|Val|Note|Val|Note|\n|:---:|---|:---:|---|:---:|---|:---:|---|\n|1|C2|10|A2|19|F3#|28|D4#|\n|2|C2#|11|A2#|20|G3|29|E4|\n|3|D2|12|H2|21|G3#|30|F4|\n|4|D2#|13|C3|22|A3|31|F4#|\n|5|E2|14|C3#|23|A3#|32|G4|\n|6|F2|15|D3|24|H3|33|G4#|\n|7|F2#|16|D3#|25|C4|34|A4|\n|8|G2|17|E3|26|C4#|35|A4#|\n|9|G2#|18|F3|27|D4|36|H4|\n'
             }]
         },
-        'getenc': {
-            signature: "IO.getenc()",
-            description: "Reads the current value of the incremental encoder (if present).",
+        getenc: {
+            signature: 'IO.getenc()',
+            description: 'Reads the current value of the incremental encoder (if present).',
             parameters: []
         },
-        'setenc': {
-            signature: "IO.setenc(pos, max, stop)",
-            description: "Sets the parameters for the incremental encoder (if present).",
+        setenc: {
+            signature: 'IO.setenc(pos, max, stop)',
+            description: 'Sets the parameters for the incremental encoder (if present).',
             parameters: [{
-                name: "pos",
-                description: "Start position of the incremental encoder. [0..max]"
+                name: 'pos',
+                description: 'Start position of the incremental encoder. [0..max]'
             }, {
-                name: "max",
-                description: "Maximum value of the incremental encoder. [1..65535]"
+                name: 'max',
+                description: 'Maximum value of the incremental encoder. [1..65535]'
             }, {
-                name: "stop",
-                description: "Behaviour of the rotary encoder at the range edges.\n\nstop = 0 - Allows value overflow\n\nstop = 1 - Value will stop at maximum, minimum"
+                name: 'stop',
+                description: 'Behaviour of the rotary encoder at the range edges.\n\nstop = 0 - Allows value overflow\n\nstop = 1 - Value will stop at maximum, minimum'
             }]
         },
-        'getpoti': {
-            signature: "IO.getpoti(idx)",
-            description: "Reads the value of a potentiometer, or its converted value (if present).",
+        getpoti: {
+            signature: 'IO.getpoti(idx)',
+            description: 'Reads the value of a potentiometer, or its converted value (if present).',
             parameters: [{
-                name: "idx",
-                description: "Component dependent. [0..X]"
+                name: 'idx',
+                description: 'Component dependent. [0..X]'
             }]
         },
-        'getadc': {
-            signature: "IO.getadc(idx)",
-            description: "Reads an analogue value. The values that can be read depend on the component.",
+        getadc: {
+            signature: 'IO.getadc(idx)',
+            description: 'Reads an analogue value. The values that can be read depend on the component.',
             parameters: [{
-                name: "idx",
-                description: "Component dependent. [0..X]"
+                name: 'idx',
+                description: 'Component dependent. [0..X]'
             }]
         },
-        'eeread': {
-            signature: "IO.eeread(adr)",
-            description: "Reads the content of the EEPROM at address **adr** (if available). Returns a 16-bit value. Always returns 0 if **adr** is invalid.",
+        eeread: {
+            signature: 'IO.eeread(adr)',
+            description: 'Reads the content of the EEPROM at address **adr** (if available). Returns a 16-bit value. Always returns 0 if **adr** is invalid.',
             parameters: [{
-                name: "adr",
-                description: "Address to read data from. [0..X]"
+                name: 'adr',
+                description: 'Address to read data from. [0..X]'
             }]
         },
-        'eewrite': {
-            signature: "IO.eewrite(adr, data)",
-            description: "Writes the 16-bit value to the EEPROM (if available). Please note that the write operation may take several milliseconds and thus delay the program's execution. To prolong the life of the EEPROM, write operations should be avoided where possible, and values saved only if they have changed.",
+        eewrite: {
+            signature: 'IO.eewrite(adr, data)',
+            description: 'Writes the 16-bit value to the EEPROM (if available). Please note that the write operation may take several milliseconds and thus delay the program\'s execution. To prolong the life of the EEPROM, write operations should be avoided where possible, and values saved only if they have changed.',
             parameters: [{
-                name: "adr",
-                description: "Address to read data from. [0..X]"
+                name: 'adr',
+                description: 'Address to read data from. [0..X]'
             }, {
-                name: "data",
-                description: "16-bit value to write. [-32768..32767]"
+                name: 'data',
+                description: '16-bit value to write. [-32768..32767]'
             }]
         },
-        'sys': {
-            signature: "IO.sys(par1, par2)",
-            description: "Universal command to set or read system parameters (if present). Both parameters must always be passed, even if they are not needed.",
+        sys: {
+            signature: 'IO.sys(par1, par2)',
+            description: 'Universal command to set or read system parameters (if present). Both parameters must always be passed, even if they are not needed.',
             parameters: [{
-                name: "par1",
-                description: "Component dependent."
+                name: 'par1',
+                description: 'Component dependent.'
             }, {
-                name: "par2",
-                description: "Component dependent."
+                name: 'par2',
+                description: 'Component dependent.'
             }]
         },
+        bt: {
+            signature: 'IO.bt(cmd, data)',
+            description: 'I/O command for communication with the Bluetooth module.',
+            parameters: [{
+                name: 'cmd',
+                description: 'Command to send.'
+            }, {
+                name: 'data',
+                description: 'Command specific data to send.'
+            }]
+        }
     }
-}
+};

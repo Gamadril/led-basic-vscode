@@ -1,8 +1,8 @@
 'use strict';
 
-import { StatusBarAlignment, window, StatusBarItem } from 'vscode';
-import { Device } from './Device';
+import { StatusBarAlignment, StatusBarItem, window } from 'vscode';
 import { ICommand } from './Common';
+import { Device } from './Device';
 
 const CMD_LED_BASIC = [dev('setled', 2), dev('setall', 1)];
 const CMD_LED_PWM = [dev('show'), dev('lrgb', 4), dev('lhsv', 4), dev('irgb', 4), dev('ihsv', 4), dev('iled', 2), dev('iall', 1), dev('irange', 3), dev('rainbow', 6), dev('copy', 2), dev('repeat', 3), dev('shift', 3), dev('mirror', 3), dev('blackout')];
@@ -21,7 +21,10 @@ const CMD_IO_SOUND = [dev('beep', 1)];
 const CMD_IO_ENC = [dev('getenc'), dev('setenc', 3)];
 const CMD_IO_EEP = [dev('eeread', 1), dev('eewrite', 2)];
 const CMD_IO_SYS = [dev('sys', 2)];
-const CMD_LED_SEG = [dev('clear'), dev('pchar', 2), dev('achar', 4), dev('praw', 2), dev('araw', 4), dev('adp', 1), dev('phex', 3), dev('pdez', 4), dev('update')];
+const CMD_IO_BT = [dev('bt', 2)];
+const CMD_LED_UPDATE = [dev('update')];
+const CMD_LED_SEG = [dev('clear'), dev('pchar', 2), dev('achar', 4), dev('praw', 2), dev('araw', 4), dev('adp', 1), dev('phex', 3), dev('pdez', 4)].concat(CMD_LED_UPDATE);
+const CMD_MATRIX = [dev('setxy', 3), dev('line', 5), dev('rect', 6), dev('circle', 5), dev('shift', 2), dev('setfont', 1), dev('char', 4), dev('pic', 2)];
 
 /**
  * List of known/supported devices
@@ -179,11 +182,44 @@ const DEVICES: Device[] = [
         }
     },
     {
+        label: 'NixieCron - Cronios 3',
+        detail: 'Imporved basis module for LED clocks playing own sound files',
+        commands: CMD_LED_PWM.concat(CMD_LED_BRIGHT).concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_LDR).concat(CMD_IO_SOUND).concat(CMD_IO_ENC).concat(CMD_IO_EEP).concat(CMD_IO_SYS),
+        meta: {
+            sysCode: 0x3400
+        }
+    },
+    {
         label: 'NixieCron - LED-Nixie-M4',
         detail: 'LED clock module with support of 4 digits',
         commands: CMD_LED_PWM.concat(CMD_LED_BRIGHT).concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_LDR).concat(CMD_IO_SOUND).concat(CMD_IO_ENC).concat(CMD_IO_EEP).concat(CMD_IO_SYS),
         meta: {
             sysCode: 0x3320
+        }
+    },
+    {
+        label: 'NixiCron - LED-Tube-Clock',
+        detail: '8-digit clock with 7-segment LED displays in VFD tube design with integrated DS3231',
+        commands: CMD_LED_SEG.concat(CMD_LED_BRIGHT).concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_SOUND).concat(CMD_IO_EEP).concat(CMD_IO_SYS),
+        meta: {
+            sysCode: 0x3300,
+            ledcnt: 0
+        }
+    },
+    {
+        label: 'NixieCron - Flame-Clock',
+        detail: 'LED-Matrix-Display for displaying a flame, time etc.',
+        commands: CMD_LED_BASIC.concat(CMD_MATRIX).concat(CMD_LED_UPDATE).concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_SOUND).concat(CMD_IO_LDR).concat(CMD_IO_EEP).concat(CMD_IO_SYS),
+        meta: {
+            sysCode: 0x3390
+        }
+    },
+    {
+        label: 'NixieCron - Matrix- and Segment-Tube-Clock',
+        detail: 'LED-Matrix-Display for displaying a flame, time etc.',
+        commands: CMD_LED_PWM.concat(CMD_MATRIX).concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_SOUND).concat(CMD_IO_LDR).concat(CMD_IO_ENC).concat(CMD_IO_EEP).concat(CMD_IO_SYS),
+        meta: {
+            sysCode: 0x3410
         }
     },
     {
@@ -194,52 +230,60 @@ const DEVICES: Device[] = [
             sysCode: 0x3370,
             ledcnt: 64
         }
+    },
+    {
+        label: 'Chronios-Bluetooth',
+        detail: 'Chronios clock module with Bluetooth support',
+        commands: CMD_LED_PWM.concat(CMD_IO_KEY).concat(CMD_IO_RTC).concat(CMD_IO_LDR).concat(CMD_IO_TEMP).concat(CMD_IO_SOUND).concat(CMD_IO_EEP).concat(CMD_IO_SYS).concat(CMD_IO_BT),
+        meta: {
+            sysCode: 0x3420
+        }
     }
 ];
 
 class DeviceSelector {
-    private _statusBarItem: StatusBarItem;
-    private _device: Device = DEVICES[2];
+    private statusBarItem: StatusBarItem;
+    private device: Device = DEVICES[2];
 
     constructor() {
-        this._statusBarItem = window.createStatusBarItem(StatusBarAlignment.Right, 2);
-        this._statusBarItem.command = 'led_basic.device';
+        this.statusBarItem = window.createStatusBarItem(StatusBarAlignment.Right, 2);
+        this.statusBarItem.command = 'led_basic.device';
         this.update();
     }
 
     /**
      * Returns currently selected device
      */
-    selectedDevice(): Device {
-        return this._device;
+    public selectedDevice(): Device {
+        return this.device;
     }
 
     /**
      * Set the device porgramatically
      * @param sysCode - system code of the device
      */
-    setDevice(sysCode: number) {
-        var device = DEVICES.find((device: Device) => {
-            return device.meta.sysCode === sysCode;
+    public setDevice(sysCode: number) {
+        const device = DEVICES.find((knownDevice: Device) => {
+            return knownDevice.meta.sysCode === sysCode;
         });
         if (device) {
-            this._device = device;
+            this.device = device;
         } else {
-            this._device = DEVICES[0];
+            this.device = DEVICES[0];
         }
         this.update();
-        return this._device;
+        return this.device;
     }
 
     /**
      * Opens a VS Code selection list with known/supported devices
      */
-    showSelection(): Promise<Device> {
+    public showSelection(): Promise<Device> {
         return new Promise((resolve, reject) => {
             window.showQuickPick(DEVICES)
                 .then((entry) => {
                     if (entry) {
-                        this._device = entry;
+                        this.device = entry;
                         this.update();
                         resolve(entry);
                     }
@@ -247,34 +291,34 @@ class DeviceSelector {
         });
     }
 
+    public dispose() {
+        this.statusBarItem.dispose();
+    }
+
     /**
      * Update the status bar
      */
     private update() {
-        let editor = window.activeTextEditor;
+        const editor = window.activeTextEditor;
         if (!editor) {
-            this._statusBarItem.hide();
+            this.statusBarItem.hide();
             return;
         }
 
-        if (editor.document.languageId !== "led_basic") {
-            this._statusBarItem.hide();
+        if (editor.document.languageId !== 'led_basic') {
+            this.statusBarItem.hide();
         } else {
-            this._statusBarItem.text = this._device.label;
-            this._statusBarItem.show();
+            this.statusBarItem.text = this.device.label;
+            this.statusBarItem.show();
         }
-    }
-
-    dispose() {
-        this._statusBarItem.dispose();
     }
 }
 
 function dev(name: string, argcount?: number): ICommand {
     return {
-        name: name,
+        name,
         argcount: argcount || 0
-    }
+    };
 }
 
 export const deviceSelector = new DeviceSelector();

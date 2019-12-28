@@ -1,22 +1,22 @@
 'use strict';
 
-import { CompletionItemProvider, TextDocument, CancellationToken, CompletionItem, ProviderResult, Position, CompletionContext } from 'vscode';
-import { API } from './LEDBasicAPI';
+import { CancellationToken, CompletionContext, CompletionItem, CompletionItemProvider, Position, ProviderResult, TextDocument } from 'vscode';
 import { deviceSelector } from './DeviceSelector';
+import { API } from './LEDBasicAPI';
 
 export class LEDBasicCompletionItemProvider implements CompletionItemProvider {
-    provideCompletionItems(document: TextDocument, position: Position, token: CancellationToken, context: CompletionContext): ProviderResult<CompletionItem[]> {
-        let commands = deviceSelector.selectedDevice().commands;
-        let lineText = document.lineAt(position.line).text
-        let lineTillCurrentPosition = lineText.substr(0, position.character)
-        let parts = /([a-zA-Z]+).(\w*)$/g.exec(lineTillCurrentPosition);
-        let result: CompletionItem[] = [];
+    public provideCompletionItems(document: TextDocument, position: Position, token: CancellationToken, context: CompletionContext): ProviderResult<CompletionItem[]> {
+        const commands = deviceSelector.selectedDevice().commands;
+        const lineText = document.lineAt(position.line).text;
+        const lineTillCurrentPosition = lineText.substr(0, position.character);
+        const parts = /([a-zA-Z]+).(\w*)$/g.exec(lineTillCurrentPosition);
+        const result: CompletionItem[] = [];
         if (parts) {
-            let libName = parts[1];
-            let lib = API[libName];
+            const libName = parts[1];
+            const lib = API[libName];
             if (lib) {
-                Object.keys(lib).forEach(func => {
-                    if (commands.find(cmd => { return cmd.name === func })) {
+                Object.keys(lib).forEach((func) => {
+                    if (commands.find((cmd) => cmd.name === func)) {
                         result.push(new CompletionItem(func));
                     }
                 });

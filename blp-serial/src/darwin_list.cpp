@@ -383,7 +383,7 @@ void EIO_AfterList(uv_work_t *req) {
     argv[0] = Nan::Null();
     argv[1] = results;
   }
-  data->callback.Call(2, argv);
+  Nan::Call(data->callback, 2, argv);
 
   for (std::list<ListResultItem *>::iterator it = data->results.begin();
        it != data->results.end(); ++it) {

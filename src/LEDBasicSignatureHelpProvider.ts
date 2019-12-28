@@ -1,31 +1,31 @@
 'use strict';
 
-import { SignatureHelpProvider, TextDocument, CancellationToken, SignatureHelp, SignatureInformation, ProviderResult, Position, ParameterInformation, MarkdownString } from 'vscode';
+import { CancellationToken, MarkdownString, ParameterInformation, Position, ProviderResult, SignatureHelp, SignatureHelpProvider, SignatureInformation, TextDocument } from 'vscode';
 import { findLibSignature, getExtensionPath } from './utils';
 
 export class LEDBasicSignatureHelpProvider implements SignatureHelpProvider {
     public provideSignatureHelp(document: TextDocument, position: Position, token: CancellationToken): ProviderResult<SignatureHelp> {
-        let theCall = this.walkBackwardsToBeginningOfCall(document, position);
+        const theCall = this.walkBackwardsToBeginningOfCall(document, position);
 
         if (theCall) {
-            let callerPos = this.previousTokenPosition(document, theCall.openParen);
+            const callerPos = this.previousTokenPosition(document, theCall.openParen);
 
             if (callerPos) {
-                let wordRange = document.getWordRangeAtPosition(callerPos);
-                let funcName = document.getText(wordRange);
+                const wordRange = document.getWordRangeAtPosition(callerPos);
+                const funcName = document.getText(wordRange);
 
-                let entry = findLibSignature(funcName);
+                const entry = findLibSignature(funcName);
 
                 if (entry) {
-                    let sigHelp = new SignatureHelp();
-                    let content = new MarkdownString();
+                    const sigHelp = new SignatureHelp();
+                    const content = new MarkdownString();
                     content.appendMarkdown(entry.description);
-                    let si = new SignatureInformation(entry.signature, content);
+                    const si = new SignatureInformation(entry.signature, content);
                     if (entry.parameters) {
-                        si.parameters = entry.parameters.map(param => {
+                        si.parameters = entry.parameters.map((param) => {
                             // check for images, e.g. ![](res/segment.png)
                             let description = param.description;
-                            let imagePath = /\[\w*\]\((.*)\)/g.exec(description);
+                            const imagePath = /\[\w*\]\((.*)\)/g.exec(description);
                             if (imagePath) {
                                 description = description.replace(imagePath[1], getExtensionPath() + imagePath[1]);
                             }
@@ -45,7 +45,7 @@ export class LEDBasicSignatureHelpProvider implements SignatureHelpProvider {
 
     private previousTokenPosition(document: TextDocument, position: Position): Position | null {
         while (position.character > 0) {
-            let word = document.getWordRangeAtPosition(position);
+            const word = document.getWordRangeAtPosition(position);
             if (word) {
                 return word.start;
             }
@@ -56,10 +56,10 @@ export class LEDBasicSignatureHelpProvider implements SignatureHelpProvider {
 
     private walkBackwardsToBeginningOfCall(document: TextDocument, position: Position): { openParen: Position, commas: Position[] } | null {
         let parenBalance = 0;
-        let commas = [];
+        const commas = [];
 
-        let currentLine = document.lineAt(position.line).text.substring(0, position.character);
-        let characterPosition = position.character;
+        const currentLine = document.lineAt(position.line).text.substring(0, position.character);
+        const characterPosition = position.character;
 
         for (let char = characterPosition; char >= 0; char--) {
             switch (currentLine[char]) {
@@ -68,7 +68,7 @@ export class LEDBasicSignatureHelpProvider implements SignatureHelpProvider {
                     if (parenBalance < 0) {
                         return {
                             openParen: new Position(position.line, char),
-                            commas: commas
+                            commas
                         };
                     }
                     break;
@@ -83,5 +83,4 @@ export class LEDBasicSignatureHelpProvider implements SignatureHelpProvider {
         }
         return null;
     }
-
 }

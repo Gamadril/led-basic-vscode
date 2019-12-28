@@ -1,5 +1,13 @@
 # LED Basic extension changelog
 
+## 2.0.0 - 28.12.2019
+- updated support to LED Basic v15.2.7
+- extended LED BASIC by droping restirction for label and variable names. Labels can be strings and variable names are not restricted to one letter
+- code refactoring
+- removed support for WinUSB driver
+- rebuild serial port library, dropped 32bit support 
+- fixed an issue in tokenizer for multiple data statements behind a label
+
 ## 1.3.0 - 06.03.2019
 - Default setting value for opening terminal after upload set to false
 - Reduced once again terminal implementation to simple output. Still waiting for TerminalRenderer API.

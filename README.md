@@ -7,7 +7,8 @@ This extension adds LED Basic support for Visual Studio Code.
 ![](gh/upload.gif)
 
 ## Features
-- LED Basic v15.2.2 support
+- LED Basic v15.2.7 support
+- Allows Strings as labels and variable names
 - Basic syntax highlighting
 - Code snippets: `for/ford`, `if/ifelse`
 - Smart bracket support

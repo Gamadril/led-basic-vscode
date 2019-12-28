@@ -3,11 +3,11 @@
 
 Poller::Poller(int fd) {
   Nan::HandleScope scope;
-  this->fd = fd;
+  this->fd          = fd;
   this->poll_handle = new uv_poll_t();
   memset(this->poll_handle, 0, sizeof(uv_poll_t));
   poll_handle->data = this;
-  int status = uv_poll_init(uv_default_loop(), poll_handle, fd);
+  int status        = uv_poll_init(uv_default_loop(), poll_handle, fd);
   if (0 != status) {
     Nan::ThrowError(uv_strerror(status));
     return;
@@ -34,7 +34,7 @@ void Poller::onClose(uv_handle_t *poll_handle) {
 void Poller::poll(int events) {
   // fprintf(stdout, "Poller:poll for %d\n", events);
   this->events = this->events | events;
-  int status = uv_poll_start(poll_handle, events, Poller::onData);
+  int status   = uv_poll_start(poll_handle, events, Poller::onData);
   if (0 != status) {
     Nan::ThrowTypeError(uv_strerror(status));
     return;
@@ -50,14 +50,13 @@ void Poller::stop() {
 }
 
 void Poller::onData(uv_poll_t *handle, int status, int events) {
-  Nan::HandleScope scope;
-  Poller *obj = static_cast<Poller *>(handle->data);
+  Nan::HandleScope     scope;
+  Poller *             obj = static_cast<Poller *>(handle->data);
   v8::Local<v8::Value> argv[2];
   if (0 != status) {
     // fprintf(stdout, "OnData Error status=%s events=%d\n",
     // uv_strerror(status), events);
-    argv[0] = v8::Exception::Error(
-        Nan::New<v8::String>(uv_strerror(status)).ToLocalChecked());
+    argv[0] = v8::Exception::Error(Nan::New<v8::String>(uv_strerror(status)).ToLocalChecked());
     argv[1] = Nan::Undefined();
   } else {
     // fprintf(stdout, "OnData status=%d events=%d\n", status, events);
@@ -68,7 +67,7 @@ void Poller::onData(uv_poll_t *handle, int status, int events) {
   int newEvents = obj->events & ~events;
   obj->poll(newEvents);
 
-  obj->callback.Call(2, argv);
+  Nan::Call(obj->callback, 2, argv);
 }
 
 NAN_MODULE_INIT(Poller::Init) {
@@ -80,17 +79,15 @@ NAN_MODULE_INIT(Poller::Init) {
   Nan::SetPrototypeMethod(tpl, "stop", stop);
 
   constructor().Reset(Nan::GetFunction(tpl).ToLocalChecked());
-  Nan::Set(target, Nan::New("Poller").ToLocalChecked(),
-           Nan::GetFunction(tpl).ToLocalChecked());
+  Nan::Set(target, Nan::New("Poller").ToLocalChecked(), Nan::GetFunction(tpl).ToLocalChecked());
 }
 
 NAN_METHOD(Poller::New) {
   if (!info.IsConstructCall()) {
-    const int argc = 2;
-    v8::Local<v8::Value> argv[argc] = {info[0], info[1]};
-    v8::Local<v8::Function> cons = Nan::New(constructor());
-    info.GetReturnValue().Set(
-        Nan::NewInstance(cons, argc, argv).ToLocalChecked());
+    const int               argc       = 2;
+    v8::Local<v8::Value>    argv[argc] = {info[0], info[1]};
+    v8::Local<v8::Function> cons       = Nan::New(constructor());
+    info.GetReturnValue().Set(Nan::NewInstance(cons, argc, argv).ToLocalChecked());
     return;
   }
 

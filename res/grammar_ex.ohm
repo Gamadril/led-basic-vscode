@@ -13,19 +13,48 @@ LEDBASIC {
               | Next
               | Delay
               | Print
-              | return
+              | Return
               | LibCall
               | endLit
 
-    Label = digit+ ":"
+    Label = LabelIdentifier ":"
 
-    variable = letter
+    LabelIdentifier =  digit+ | identifier
 
-    random = caseInsensitive<"random">
+    variable = identifier
 
-    variableDecl = letter
+    identifier (an identifier) = ~keyword identifierName
 
-    Assignment = (caseInsensitive<"let">)? variableDecl "=" Expression
+    identifierName = identifierStart identifierPart*
+
+    identifierStart = letter
+
+    identifierPart = identifierStart | digit | "_"
+
+    keyword = for | if | rem | let | next | then | else | goto | gosub | return | random | delay | print | data | read | led | io | matrix
+
+    Random = caseInsensitive<"random">
+
+    if = "if" ~identifierPart
+    else = "else" ~identifierPart
+    for = "for" ~identifierPart
+    rem = "rem" ~identifierPart
+    let = "let" ~identifierPart
+    next = "next" ~identifierPart
+    then = "then" ~identifierPart
+    goto = "goto" ~identifierPart
+    gosub = "gosub" ~identifierPart
+    return = "return" ~identifierPart
+    random = "random" ~identifierPart
+    delay = "delay" ~identifierPart
+    print = "print" ~identifierPart
+    data = "data" ~identifierPart
+    read = "read" ~identifierPart
+    led = "led" ~identifierPart
+    io = "io" ~identifierPart
+    matrix = "matrix" ~identifierPart
+
+    Assignment = (caseInsensitive<"let">)? identifier "=" Expression
 
     Expression =  LogicOrExpression
     
@@ -58,11 +87,11 @@ LEDBASIC {
 
     RestExpression = LibCall
         | DataRead
-        | random
+        | Random
         | variable
         | value
 
-    return = caseInsensitive<"return">
+    Return = caseInsensitive<"return">
     endLit = caseInsensitive<"end">
 
 // Operation
@@ -79,7 +108,7 @@ LEDBASIC {
     Comparison = caseInsensitive<"if"> Expression (caseInsensitive<"then">)? Statement (caseInsensitive<"else"> Statement)?
 
 // Jump
-    Jump = (caseInsensitive<"goto"> | caseInsensitive<"gosub">) decimalValue
+    Jump = (caseInsensitive<"goto"> | caseInsensitive<"gosub">) LabelIdentifier
 
 // Delay
     Delay = caseInsensitive<"delay"> Expression
@@ -97,7 +126,7 @@ LEDBASIC {
 
 // Date read
     DataLine = (Label)? caseInsensitive<"data"> DataElems
-    DataRead = caseInsensitive<"read"> decimalValue "," Expression
+    DataRead = caseInsensitive<"read"> LabelIdentifier "," Expression
     DataElems = NonemptyListOf<(hexValue | binaryValue | decimalValue), ",">
 
 // Value
@@ -113,5 +142,6 @@ LEDBASIC {
     space := " " | "\t"
 
     comment = ("\'" | caseInsensitive<"rem">) (~eol any)*
-    eol = "\n" | "\r\n"
+    eol (end of line)
+        = "\n" | "\r\n"
 }

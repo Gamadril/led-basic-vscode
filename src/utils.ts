@@ -1,20 +1,19 @@
 'use strict';
-import { IEntry, API } from "./LEDBasicAPI";
-import { extensions } from "vscode";
+import { extensions } from 'vscode';
+import { workspace } from 'vscode';
+import { API, IEntry } from './LEDBasicAPI';
 
 /**
  * Finds the function signature information
- * 
+ *
  * @param funcName - Function name to serach for
  */
 export function findLibSignature(funcName: string): IEntry | null {
-    let libNames = Object.keys(API);
+    const libNames = Object.keys(API);
     let result = null;
 
-    libNames.some(lib => {
-        let func = Object.keys(API[lib]).find(func => {
-            return func === funcName;
-        });
+    libNames.some((lib) => {
+        const func = Object.keys(API[lib]).find((apiFunc) => apiFunc === funcName);
         if (func) {
             result = API[lib][func];
             return true;
@@ -29,7 +28,7 @@ export function findLibSignature(funcName: string): IEntry | null {
  * Returns the root path of the current extension
  */
 export function getExtensionPath(): string {
-    let ext = extensions.getExtension('Gamadril.led-basic');
+    const ext = extensions.getExtension('Gamadril.led-basic');
     if (ext) {
         return ext.extensionPath + '/';
     }
@@ -38,11 +37,11 @@ export function getExtensionPath(): string {
 
 /**
  * Converts the provided array to a HEX string representation
- * @param array 
+ * @param array
  */
 export function dump(array: Uint8Array): string {
-    var str = '';
-    for (var index = 0; index < array.length; index++) {
+    let str = '';
+    for (let index = 0; index < array.length; index++) {
         str += ('0' + (Number(array[index]).toString(16))).slice(-2).toUpperCase();
         if (index % 16 === 15) {
             str += '\n';
@@ -57,3 +56,15 @@ export function dumpToFile(array: Uint8Array, path: string) {
     const fs = require('fs');
     fs.writeFileSync(path, array);
 }
+
+/**
+ * Check the state of the strict mode
+ */
+export function isStrictMode() {
+    const config = workspace.getConfiguration('led_basic');
+    const strictMode = config && config.useStrictMode ? true : false;
+    return strictMode;
+}
+
+export const labelIdentifierPattern = '[a-zA-Z0-9_]+';
+export const variableIdentifierPattern = '[a-zA-Z][a-zA-Z0-9_]*';

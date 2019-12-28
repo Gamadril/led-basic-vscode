@@ -19,26 +19,20 @@
 #include "./poller.h"
 #endif
 
-v8::Local<v8::Value> getValueFromObject(v8::Local<v8::Object> options,
-                                        std::string key) {
+v8::Local<v8::Value> getValueFromObject(v8::Local<v8::Object> options, std::string key) {
   v8::Local<v8::String> v8str = Nan::New<v8::String>(key).ToLocalChecked();
   return Nan::Get(options, v8str).ToLocalChecked();
 }
 
 int getIntFromObject(v8::Local<v8::Object> options, std::string key) {
-  return Nan::To<v8::Int32>(getValueFromObject(options, key))
-      .ToLocalChecked()
-      ->Value();
+  return Nan::To<v8::Int32>(getValueFromObject(options, key)).ToLocalChecked()->Value();
 }
 
 bool getBoolFromObject(v8::Local<v8::Object> options, std::string key) {
-  return Nan::To<v8::Boolean>(getValueFromObject(options, key))
-      .ToLocalChecked()
-      ->Value();
+  return Nan::To<v8::Boolean>(getValueFromObject(options, key)).ToLocalChecked()->Value();
 }
 
-v8::Local<v8::String> getStringFromObj(v8::Local<v8::Object> options,
-                                       std::string key) {
+v8::Local<v8::String> getStringFromObj(v8::Local<v8::Object> options, std::string key) {
   return Nan::To<v8::String>(getValueFromObject(options, key)).ToLocalChecked();
 }
 
@@ -52,14 +46,20 @@ NAN_METHOD(Open) {
     Nan::ThrowTypeError("First argument must be a string");
     return;
   }
-  v8::String::Utf8Value path(info[0]->ToString());
+
+  Nan::Utf8String path(info[0]);
+  int             len = path.length();
+  if (len <= 0) {
+    Nan::ThrowTypeError("First argument must be a non-empty string");
+    return;
+  }
 
   // options
   if (!info[1]->IsObject()) {
     Nan::ThrowTypeError("Second argument must be an object");
     return;
   }
-  v8::Local<v8::Object> options = info[1]->ToObject();
+  v8::Local<v8::Object> options = Nan::To<v8::Object>(info[1]).ToLocalChecked();
 
   // callback
   if (!info[2]->IsFunction()) {
@@ -71,26 +71,25 @@ NAN_METHOD(Open) {
   snprintf(baton->path, sizeof(baton->path), "%s", *path);
   baton->baudRate = getIntFromObject(options, "baudRate");
   baton->dataBits = getIntFromObject(options, "dataBits");
-  baton->parity = ToParityEnum(getStringFromObj(options, "parity"));
+  baton->parity   = ToParityEnum(getStringFromObj(options, "parity"));
   baton->stopBits = ToStopBitEnum(getDoubleFromObject(options, "stopBits"));
-  baton->rtscts = getBoolFromObject(options, "rtscts");
-  baton->xon = getBoolFromObject(options, "xon");
-  baton->xoff = getBoolFromObject(options, "xoff");
-  baton->xany = getBoolFromObject(options, "xany");
-  baton->hupcl = getBoolFromObject(options, "hupcl");
-  baton->lock = getBoolFromObject(options, "lock");
+  baton->rtscts   = getBoolFromObject(options, "rtscts");
+  baton->xon      = getBoolFromObject(options, "xon");
+  baton->xoff     = getBoolFromObject(options, "xoff");
+  baton->xany     = getBoolFromObject(options, "xany");
+  baton->hupcl    = getBoolFromObject(options, "hupcl");
+  baton->lock     = getBoolFromObject(options, "lock");
   baton->callback.Reset(info[2].As<v8::Function>());
 
 #ifndef WIN32
-  baton->vmin = getIntFromObject(options, "vmin");
+  baton->vmin  = getIntFromObject(options, "vmin");
   baton->vtime = getIntFromObject(options, "vtime");
 #endif
 
   uv_work_t *req = new uv_work_t();
-  req->data = baton;
+  req->data      = baton;
 
-  uv_queue_work(uv_default_loop(), req, EIO_Open,
-                (uv_after_work_cb)EIO_AfterOpen);
+  uv_queue_work(uv_default_loop(), req, EIO_Open, (uv_after_work_cb)EIO_AfterOpen);
 }
 
 void EIO_AfterOpen(uv_work_t *req) {
@@ -100,15 +99,14 @@ void EIO_AfterOpen(uv_work_t *req) {
 
   v8::Local<v8::Value> argv[2];
   if (data->errorString[0]) {
-    argv[0] = v8::Exception::Error(
-        Nan::New<v8::String>(data->errorString).ToLocalChecked());
+    argv[0] = v8::Exception::Error(Nan::New<v8::String>(data->errorString).ToLocalChecked());
     argv[1] = Nan::Undefined();
   } else {
     argv[0] = Nan::Null();
     argv[1] = Nan::New<v8::Int32>(data->result);
   }
 
-  data->callback.Call(2, argv);
+  Nan::Call(data->callback, 2, argv);
   delete data;
   delete req;
 }
@@ -126,10 +124,9 @@ NAN_METHOD(Update) {
     Nan::ThrowTypeError("Second argument must be an object");
     return;
   }
-  v8::Local<v8::Object> options = info[1]->ToObject();
+  v8::Local<v8::Object> options = Nan::To<v8::Object>(info[1]).ToLocalChecked();
 
-  if (!Nan::Has(options, Nan::New<v8::String>("baudRate").ToLocalChecked())
-           .FromMaybe(false)) {
+  if (!Nan::Has(options, Nan::New<v8::String>("baudRate").ToLocalChecked()).FromMaybe(false)) {
     Nan::ThrowTypeError("\"baudRate\" must be set on options object");
     return;
   }
@@ -142,32 +139,29 @@ NAN_METHOD(Update) {
 
   ConnectionOptionsBaton *baton = new ConnectionOptionsBaton();
 
-  baton->fd = fd;
+  baton->fd       = fd;
   baton->baudRate = getIntFromObject(options, "baudRate");
   baton->callback.Reset(info[2].As<v8::Function>());
 
   uv_work_t *req = new uv_work_t();
-  req->data = baton;
+  req->data      = baton;
 
-  uv_queue_work(uv_default_loop(), req, EIO_Update,
-                (uv_after_work_cb)EIO_AfterUpdate);
+  uv_queue_work(uv_default_loop(), req, EIO_Update, (uv_after_work_cb)EIO_AfterUpdate);
 }
 
 void EIO_AfterUpdate(uv_work_t *req) {
   Nan::HandleScope scope;
 
-  ConnectionOptionsBaton *data =
-      static_cast<ConnectionOptionsBaton *>(req->data);
+  ConnectionOptionsBaton *data = static_cast<ConnectionOptionsBaton *>(req->data);
 
   v8::Local<v8::Value> argv[1];
   if (data->errorString[0]) {
-    argv[0] = v8::Exception::Error(
-        Nan::New<v8::String>(data->errorString).ToLocalChecked());
+    argv[0] = v8::Exception::Error(Nan::New<v8::String>(data->errorString).ToLocalChecked());
   } else {
     argv[0] = Nan::Null();
   }
 
-  data->callback.Call(1, argv);
+  Nan::Call(data->callback, 1, argv);
 
   delete data;
   delete req;
@@ -187,27 +181,25 @@ NAN_METHOD(Close) {
   }
 
   VoidBaton *baton = new VoidBaton();
-  baton->fd = Nan::To<v8::Int32>(info[0]).ToLocalChecked()->Value();
+  baton->fd        = Nan::To<v8::Int32>(info[0]).ToLocalChecked()->Value();
   baton->callback.Reset(info[1].As<v8::Function>());
 
   uv_work_t *req = new uv_work_t();
-  req->data = baton;
-  uv_queue_work(uv_default_loop(), req, EIO_Close,
-                (uv_after_work_cb)EIO_AfterClose);
+  req->data      = baton;
+  uv_queue_work(uv_default_loop(), req, EIO_Close, (uv_after_work_cb)EIO_AfterClose);
 }
 
 void EIO_AfterClose(uv_work_t *req) {
   Nan::HandleScope scope;
-  VoidBaton *data = static_cast<VoidBaton *>(req->data);
+  VoidBaton *      data = static_cast<VoidBaton *>(req->data);
 
   v8::Local<v8::Value> argv[1];
   if (data->errorString[0]) {
-    argv[0] = v8::Exception::Error(
-        Nan::New<v8::String>(data->errorString).ToLocalChecked());
+    argv[0] = v8::Exception::Error(Nan::New<v8::String>(data->errorString).ToLocalChecked());
   } else {
     argv[0] = Nan::Null();
   }
-  data->callback.Call(1, argv);
+  Nan::Call(data->callback, 1, argv);
 
   delete data;
   delete req;
@@ -229,13 +221,12 @@ NAN_METHOD(Flush) {
   v8::Local<v8::Function> callback = info[1].As<v8::Function>();
 
   VoidBaton *baton = new VoidBaton();
-  baton->fd = fd;
+  baton->fd        = fd;
   baton->callback.Reset(callback);
 
   uv_work_t *req = new uv_work_t();
-  req->data = baton;
-  uv_queue_work(uv_default_loop(), req, EIO_Flush,
-                (uv_after_work_cb)EIO_AfterFlush);
+  req->data      = baton;
+  uv_queue_work(uv_default_loop(), req, EIO_Flush, (uv_after_work_cb)EIO_AfterFlush);
 }
 
 void EIO_AfterFlush(uv_work_t *req) {
@@ -246,13 +237,12 @@ void EIO_AfterFlush(uv_work_t *req) {
   v8::Local<v8::Value> argv[1];
 
   if (data->errorString[0]) {
-    argv[0] = v8::Exception::Error(
-        Nan::New<v8::String>(data->errorString).ToLocalChecked());
+    argv[0] = v8::Exception::Error(Nan::New<v8::String>(data->errorString).ToLocalChecked());
   } else {
     argv[0] = Nan::Null();
   }
 
-  data->callback.Call(1, argv);
+  Nan::Call(data->callback, 1, argv);
 
   delete data;
   delete req;
@@ -271,7 +261,7 @@ NAN_METHOD(Set) {
     Nan::ThrowTypeError("Second argument must be an object");
     return;
   }
-  v8::Local<v8::Object> options = info[1]->ToObject();
+  v8::Local<v8::Object> options = Nan::To<v8::Object>(info[1]).ToLocalChecked();
 
   // callback
   if (!info[2]->IsFunction()) {
@@ -281,7 +271,7 @@ NAN_METHOD(Set) {
   v8::Local<v8::Function> callback = info[2].As<v8::Function>();
 
   SetBaton *baton = new SetBaton();
-  baton->fd = fd;
+  baton->fd       = fd;
   baton->callback.Reset(callback);
   baton->brk = getBoolFromObject(options, "brk");
   baton->rts = getBoolFromObject(options, "rts");
@@ -290,9 +280,8 @@ NAN_METHOD(Set) {
   baton->dsr = getBoolFromObject(options, "dsr");
 
   uv_work_t *req = new uv_work_t();
-  req->data = baton;
-  uv_queue_work(uv_default_loop(), req, EIO_Set,
-                (uv_after_work_cb)EIO_AfterSet);
+  req->data      = baton;
+  uv_queue_work(uv_default_loop(), req, EIO_Set, (uv_after_work_cb)EIO_AfterSet);
 }
 
 void EIO_AfterSet(uv_work_t *req) {
@@ -303,12 +292,11 @@ void EIO_AfterSet(uv_work_t *req) {
   v8::Local<v8::Value> argv[1];
 
   if (data->errorString[0]) {
-    argv[0] = v8::Exception::Error(
-        Nan::New<v8::String>(data->errorString).ToLocalChecked());
+    argv[0] = v8::Exception::Error(Nan::New<v8::String>(data->errorString).ToLocalChecked());
   } else {
     argv[0] = Nan::Null();
   }
-  data->callback.Call(1, argv);
+  Nan::Call(data->callback, 1, argv);
 
   delete data;
   delete req;
@@ -329,16 +317,15 @@ NAN_METHOD(Get) {
   }
 
   GetBaton *baton = new GetBaton();
-  baton->fd = fd;
-  baton->cts = false;
-  baton->dsr = false;
-  baton->dcd = false;
+  baton->fd       = fd;
+  baton->cts      = false;
+  baton->dsr      = false;
+  baton->dcd      = false;
   baton->callback.Reset(info[1].As<v8::Function>());
 
   uv_work_t *req = new uv_work_t();
-  req->data = baton;
-  uv_queue_work(uv_default_loop(), req, EIO_Get,
-                (uv_after_work_cb)EIO_AfterGet);
+  req->data      = baton;
+  uv_queue_work(uv_default_loop(), req, EIO_Get, (uv_after_work_cb)EIO_AfterGet);
 }
 
 void EIO_AfterGet(uv_work_t *req) {
@@ -349,22 +336,18 @@ void EIO_AfterGet(uv_work_t *req) {
   v8::Local<v8::Value> argv[2];
 
   if (data->errorString[0]) {
-    argv[0] = v8::Exception::Error(
-        Nan::New<v8::String>(data->errorString).ToLocalChecked());
+    argv[0] = v8::Exception::Error(Nan::New<v8::String>(data->errorString).ToLocalChecked());
     argv[1] = Nan::Undefined();
   } else {
     v8::Local<v8::Object> results = Nan::New<v8::Object>();
-    results->Set(Nan::New<v8::String>("cts").ToLocalChecked(),
-                 Nan::New<v8::Boolean>(data->cts));
-    results->Set(Nan::New<v8::String>("dsr").ToLocalChecked(),
-                 Nan::New<v8::Boolean>(data->dsr));
-    results->Set(Nan::New<v8::String>("dcd").ToLocalChecked(),
-                 Nan::New<v8::Boolean>(data->dcd));
+    Nan::Set(results, Nan::New<v8::String>("cts").ToLocalChecked(), Nan::New<v8::Boolean>(data->cts));
+    Nan::Set(results, Nan::New<v8::String>("dsr").ToLocalChecked(), Nan::New<v8::Boolean>(data->dsr));
+    Nan::Set(results, Nan::New<v8::String>("dcd").ToLocalChecked(), Nan::New<v8::Boolean>(data->dcd));
 
     argv[0] = Nan::Null();
     argv[1] = results;
   }
-  data->callback.Call(2, argv);
+  Nan::Call(data->callback, 2, argv);
 
   delete data;
   delete req;
@@ -385,14 +368,13 @@ NAN_METHOD(GetBaudRate) {
   }
 
   GetBaudRateBaton *baton = new GetBaudRateBaton();
-  baton->fd = fd;
-  baton->baudRate = 0;
+  baton->fd               = fd;
+  baton->baudRate         = 0;
   baton->callback.Reset(info[1].As<v8::Function>());
 
   uv_work_t *req = new uv_work_t();
-  req->data = baton;
-  uv_queue_work(uv_default_loop(), req, EIO_GetBaudRate,
-                (uv_after_work_cb)EIO_AfterGetBaudRate);
+  req->data      = baton;
+  uv_queue_work(uv_default_loop(), req, EIO_GetBaudRate, (uv_after_work_cb)EIO_AfterGetBaudRate);
 }
 
 void EIO_AfterGetBaudRate(uv_work_t *req) {
@@ -403,18 +385,17 @@ void EIO_AfterGetBaudRate(uv_work_t *req) {
   v8::Local<v8::Value> argv[2];
 
   if (data->errorString[0]) {
-    argv[0] = v8::Exception::Error(
-        Nan::New<v8::String>(data->errorString).ToLocalChecked());
+    argv[0] = v8::Exception::Error(Nan::New<v8::String>(data->errorString).ToLocalChecked());
     argv[1] = Nan::Undefined();
   } else {
     v8::Local<v8::Object> results = Nan::New<v8::Object>();
-    results->Set(Nan::New<v8::String>("baudRate").ToLocalChecked(),
+    Nan::Set(results, Nan::New<v8::String>("baudRate").ToLocalChecked(),
                  Nan::New<v8::Integer>(data->baudRate));
 
     argv[0] = Nan::Null();
     argv[1] = results;
   }
-  data->callback.Call(2, argv);
+  Nan::Call(data->callback, 2, argv);
 
   delete data;
   delete req;
@@ -435,13 +416,12 @@ NAN_METHOD(Drain) {
   }
 
   VoidBaton *baton = new VoidBaton();
-  baton->fd = fd;
+  baton->fd        = fd;
   baton->callback.Reset(info[1].As<v8::Function>());
 
   uv_work_t *req = new uv_work_t();
-  req->data = baton;
-  uv_queue_work(uv_default_loop(), req, EIO_Drain,
-                (uv_after_work_cb)EIO_AfterDrain);
+  req->data      = baton;
+  uv_queue_work(uv_default_loop(), req, EIO_Drain, (uv_after_work_cb)EIO_AfterDrain);
 }
 
 void EIO_AfterDrain(uv_work_t *req) {
@@ -452,12 +432,11 @@ void EIO_AfterDrain(uv_work_t *req) {
   v8::Local<v8::Value> argv[1];
 
   if (data->errorString[0]) {
-    argv[0] = v8::Exception::Error(
-        Nan::New<v8::String>(data->errorString).ToLocalChecked());
+    argv[0] = v8::Exception::Error(Nan::New<v8::String>(data->errorString).ToLocalChecked());
   } else {
     argv[0] = Nan::Null();
   }
-  data->callback.Call(1, argv);
+  Nan::Call(data->callback, 1, argv);
 
   delete data;
   delete req;
@@ -465,8 +444,8 @@ void EIO_AfterDrain(uv_work_t *req) {
 
 SerialPortParity NAN_INLINE(ToParityEnum(const v8::Local<v8::String> &v8str)) {
   Nan::HandleScope scope;
-  Nan::Utf8String str(v8str);
-  size_t count = strlen(*str);
+  Nan::Utf8String  str(v8str);
+  size_t           count  = strlen(*str);
   SerialPortParity parity = SERIALPORT_PARITY_NONE;
   if (!strncasecmp(*str, "none", count)) {
     parity = SERIALPORT_PARITY_NONE;
@@ -493,7 +472,7 @@ SerialPortStopBits NAN_INLINE(ToStopBitEnum(double stopBits)) {
 }
 
 extern "C" {
-void init(v8::Handle<v8::Object> target) {
+void init(v8::Local<v8::Object> target) {
   Nan::HandleScope scope;
   Nan::SetMethod(target, "set", Set);
   Nan::SetMethod(target, "get", Get);

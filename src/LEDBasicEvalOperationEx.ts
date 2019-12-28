@@ -5,7 +5,27 @@ import { COLOUR_ORDER, IConfig, IError, IEvalOperation, IJumpTable, IMatchResult
 
 let JumpTable: IJumpTable = {};
 let lineNumber = 0;
+let labelIdCounter = 1000;
+let variableIdCounter = 0;
 let errors: IError[] = [];
+
+const labelsMap: { [label: string]: number; } = {};
+const variablesMap: { [label: string]: number; } = {};
+
+function getLabel() {
+    let labelId = labelIdCounter;
+    labelIdCounter++;
+    if (Object.values(labelsMap).indexOf(labelId) !== -1) {
+        labelId = getLabel();
+    }
+    return labelId;
+}
+
+function getVariable() {
+    const variableId = variableIdCounter;
+    variableIdCounter++;
+    return variableId;
+}
 
 export const operation: IEvalOperation = {
     Program(comments, configLine, lines) {
@@ -292,16 +312,24 @@ export const operation: IEvalOperation = {
             value: result
         };
     },
-    Label(labelLit, colon) {
-        // if (Labels.indexOf(labelLit) !== -1) {
-        //   throw 'Label ' + labelLit + ' already exists'
-        // }
-        const label = parseInt(labelLit.sourceString, 10);
+    LabelIdentifier(labelLit) {
+        return labelLit.sourceString;
+    },
+    Label(e, colon) {
+        const ev = e.eval();
+        let label = parseInt(ev, 10);
+        if (isNaN(label)) {
+            label = getLabel();
+            labelsMap[ev] = label;
+        }
+
         if (label > 0x7FFE) {
             throw new Error('Label value to big. Max number allowed: 32766');
         }
+
         const result = new Uint8Array(3);
         const dv = new DataView(result.buffer);
+        // tslint:disable-next-line: no-bitwise
         dv.setUint16(0, label | 0x8000, true);
         result[2] = 0;
 
@@ -310,17 +338,8 @@ export const operation: IEvalOperation = {
             value: result
         };
     },
-    variableDecl(e) {
-        const variable = e.sourceString.toLowerCase().charCodeAt(0) - 'a'.charCodeAt(0);
-        const result = new Uint8Array(1);
-        result[0] = variable;
-        return {
-            type: 'vardec',
-            value: result
-        };
-    },
     variable(e) {
-        const variable = e.sourceString.toLowerCase().charCodeAt(0) - 'a'.charCodeAt(0);
+        const variable = variablesMap[e.sourceString.toLowerCase()];
         const result = new Uint8Array(2);
         result[0] = 0x8A;
         result[1] = variable;
@@ -331,12 +350,18 @@ export const operation: IEvalOperation = {
     },
     Assignment(letLit, left, equalSign, right) {
         const rightSide = right.eval();
-        const variable = left.eval();
+        const variableLit = left.sourceString;
 
-        const result = new Uint8Array(variable.value.length + rightSide.value.length + 1);
+        let variable = variablesMap[variableLit];
+        if (variable === undefined) {
+            variable = getVariable();
+            variablesMap[variableLit] = variable;
+        }
+
+        const result = new Uint8Array(rightSide.value.length + 1 + 1);
         result[0] = 0x8B;
-        result.set(variable.value, 1);
-        result.set(rightSide.value, variable.value.length + 1);
+        result[1] = variable;
+        result.set(rightSide.value, 2);
 
         return {
             type: 'assign',
@@ -551,7 +576,7 @@ export const operation: IEvalOperation = {
             value: result
         };
     },
-    Jump(jumpOp, label) {
+    Jump(jumpOp, labelLit) {
         const result = new Uint8Array(3);
         if (jumpOp.sourceString.toLowerCase() === 'goto') {
             result[0] = 0x95;
@@ -559,7 +584,12 @@ export const operation: IEvalOperation = {
             result[0] = 0x96;
         }
         const dv = new DataView(result.buffer);
-        const lbl = label.eval();
+        const lbl = labelLit.eval();
+        let label = parseInt(lbl, 10);
+        if (isNaN(label)) {
+            label = labelsMap[lbl];
+        }
+
         if (lbl > 0x7FFE) {
             throw new Error('Label value to big. Max number allowed: 32766');
         }
@@ -736,14 +766,19 @@ export const operation: IEvalOperation = {
             value: result
         };
     },
-    DataRead(readLit, label, commaLit, index) {
-        const lev = label.eval();
+    DataRead(readLit, labelLit, commaLit, index) {
+        const lbl = labelLit.eval();
         const inev = index.eval();
+
+        let label = parseInt(lbl, 10);
+        if (isNaN(label)) {
+            label = labelsMap[lbl];
+        }
 
         const result = new Uint8Array(3 + inev.value.length); // TOKEN 8bit, ADDR 16bit
         result[0] = 0xAF;
         const dv = new DataView(result.buffer);
-        dv.setUint16(1, lev | 0x8000, true);
+        dv.setUint16(1, label | 0x8000, true);
         result.set(inev.value, 3);
 
         return {
@@ -790,7 +825,7 @@ export const operation: IEvalOperation = {
     binaryValue(prefix, value) {
         return parseInt(value.sourceString, 2);
     },
-    return(e) {
+    Return(e) {
         const result = new Uint8Array(1);
         result[0] = 0x97;
         return {
@@ -814,3 +849,4 @@ export const operation: IEvalOperation = {
         return this.sourceString;
     }
 };
+

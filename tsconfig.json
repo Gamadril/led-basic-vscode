@@ -7,8 +7,18 @@
             "es2017"
         ],
         "sourceMap": true,
+        "rootDir": "src",
         "noUnusedLocals": true,
-        "strict": true
+        "strict": true,
+        "plugins": [
+            {
+                "name": "typescript-tslint-plugin",
+                "alwaysShowRuleFailuresAsWarnings": true,
+                "ignoreDefinitionFiles": true,
+                "configFile": "./tslint.json",
+                "suppressWhileTypeErrorsPresent": false,
+            }
+        ]
     },
     "exclude": [
         "node_modules",
