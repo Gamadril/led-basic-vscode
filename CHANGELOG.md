@@ -2,7 +2,7 @@
 
 ## 2.0.0 - 28.12.2019
 - updated support to LED Basic v15.2.7
-- extended LED BASIC by droping restirction for label and variable names. Labels can be strings and variable names are not restricted to one letter
+- extended LED BASIC by dropping restriction for label and variable names. Labels can be strings and variable names are not restricted to one letter
 - code refactoring
 - removed support for WinUSB driver
 - rebuild serial port library, dropped 32bit support 
