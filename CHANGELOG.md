@@ -1,5 +1,9 @@
 # LED Basic extension changelog
 
+## 2.0.1 - 15.06.2020
+- fixed a bug with mixed up labels detection
+- rebuild serial port library
+
 ## 2.0.0 - 28.12.2019
 - updated support to LED Basic v15.2.7
 - extended LED BASIC by dropping restriction for label and variable names. Labels can be strings and variable names are not restricted to one letter

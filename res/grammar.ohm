@@ -21,8 +21,6 @@ LEDBASIC {
 
     variable = letter
 
-    random = caseInsensitive<"random">
-
     variableDecl = letter
 
     Assignment = (caseInsensitive<"let">)? variableDecl "=" Expression
@@ -58,7 +56,7 @@ LEDBASIC {
 
     RestExpression = LibCall
         | DataRead
-        | random
+        | Random
         | variable
         | value
 
@@ -96,9 +94,11 @@ LEDBASIC {
     CallArgs = ListOf<Expression, ",">
 
 // Date read
-    DataLine = (Label)? caseInsensitive<"data"> DataElems
+    DataLine = (Label)? caseInsensitive<"data"> DataElems ","?
     DataRead = caseInsensitive<"read"> decimalValue "," Expression
     DataElems = NonemptyListOf<(hexValue | binaryValue | decimalValue), ",">
+
+    Random = caseInsensitive<"random">
 
 // Value
     binaryDigit = "0".."1"

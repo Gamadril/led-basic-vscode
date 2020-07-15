@@ -2,6 +2,9 @@
 // tslint:disable: no-bitwise
 
 import { COLOUR_ORDER, IConfig, IError, IEvalOperation, IJumpTable, IMatchResult, IOperationList, LibMap } from './Common';
+// import { dump } from './utils';
+
+const DEBUG_STRICT = false;
 
 let JumpTable: IJumpTable = {};
 let lineNumber = 0;
@@ -21,9 +24,14 @@ function getLabel() {
     return labelId;
 }
 
-function getVariable() {
-    const variableId = variableIdCounter;
-    variableIdCounter++;
+function getVariable(literal: string) {
+    let variableId;
+    if (DEBUG_STRICT) {
+        variableId = literal.charCodeAt(0) - 'a'.charCodeAt(0);
+    } else {
+        variableId = variableIdCounter;
+        variableIdCounter++;
+    }
     return variableId;
 }
 
@@ -35,7 +43,7 @@ export const operation: IEvalOperation = {
 
         const coms = comments.eval();
         const conf = configLine.eval();
-        const main = lines.eval();
+        const progLines = lines.eval();
         let len = 0;
         lineNumber += coms.length;
         lineNumber += conf.length;
@@ -48,10 +56,11 @@ export const operation: IEvalOperation = {
         let hasData = false;
         let dataLengthPos = 0;
         // first run, calc final size and create a jump table for labels
-        for (let i = 0; i < main.length; i++) {
-            const type = main[i].type;
+        for (let i = 0; i < progLines.length; i++) {
+            const line = progLines[i];
+            const type = line.type;
             if (type === 'label') {
-                const label = new DataView(main[i].value.buffer).getUint16(0, true) - 0x8000;
+                const label = new DataView(line.value.buffer).getUint16(0, true) - 0x8000;
                 if (JumpTable[label] !== undefined) {
                     const iLine = getLine(i);
                     errors.push({
@@ -74,7 +83,7 @@ export const operation: IEvalOperation = {
                 isInLabel = true;
                 hasData = false;
             } else if (type === 'dataline') {
-                if (!isInLabel && !main[i].label) {
+                if (!isInLabel && !line.label) {
                     const iLine = getLine(i);
                     errors.push({
                         message: 'Data definition is only possible after a label.',
@@ -91,8 +100,8 @@ export const operation: IEvalOperation = {
                     });
                 }
 
-                if (main[i].label) {
-                    const label = new DataView(main[i].label.value.buffer).getUint16(0, true) - 0x8000;
+                if (line.label) {
+                    const label = new DataView(line.label.value.buffer).getUint16(0, true) - 0x8000;
                     if (JumpTable[label] !== undefined) {
                         const iLine = getLine(i);
                         errors.push({
@@ -146,20 +155,21 @@ export const operation: IEvalOperation = {
                 // isInLabel = false;
                 len += 2; // line number and length
             }
-            len += main[i].value.length;
+            len += line.value.length;
         }
 
-        const result = new Uint8Array(len + 2); // 0xFFFF end of stream
+        const result = new Uint8Array(len + 2); // +2 = 0xFFFF end of stream
         const dv = new DataView(result.buffer);
 
         len = 0;
         isInLabel = false;
         hasData = false;
         // tslint:disable-next-line: prefer-for-of
-        for (let i = 0; i < main.length; i++) {
-            const val = main[i].value;
-            const type = main[i].type;
-            const label = main[i].label;
+        for (let i = 0; i < progLines.length; i++) {
+            const line = progLines[i];
+            const val = line.value;
+            const type = line.type;
+            const label = line.label;
 
             if (type === 'emptyline') {
                 lineNumber++;
@@ -167,6 +177,10 @@ export const operation: IEvalOperation = {
             }
 
             if (type === 'dataline') {
+                if (label) {
+                    hasData = false;
+                }
+
                 if (!hasData) {
                     if (label) {
                         result.set(label.value, len);
@@ -195,13 +209,15 @@ export const operation: IEvalOperation = {
                 for (let j = 0; j < val.length; j++) {
                     if ((val[j] === 0x95 || val[j] === 0x96 || val[j] === 0xAF) && j < val.length - 2) {
                         const locdv = new DataView(val.buffer);
-                        const label = locdv.getUint16(j + 1, true);
-                        if (label & 0x8000) {
-                            let addr = JumpTable[label - 0x8000];
-                            if (val[j] === 0xAF) {
-                                addr += 5;
+                        const labelNr = locdv.getUint16(j + 1, true);
+                        if (labelNr & 0x8000) {
+                            let addr = JumpTable[labelNr - 0x8000];
+                            if (addr) {
+                                if (val[j] === 0xAF) {
+                                    addr += 5;
+                                }
+                                locdv.setUint16(j + 1, addr, true);
                             }
-                            locdv.setUint16(j + 1, addr, true);
                         }
                     }
                 }
@@ -213,8 +229,6 @@ export const operation: IEvalOperation = {
             result.set(val, len);
             len += val.length;
             lineNumber++;
-
-            // console.log(Utils.dump(result));
         }
 
         result.set([0xFF, 0xFF], len);
@@ -339,7 +353,12 @@ export const operation: IEvalOperation = {
         };
     },
     variable(e) {
-        const variable = variablesMap[e.sourceString.toLowerCase()];
+        const variableLit = e.sourceString;
+        let variable = variablesMap[variableLit];
+        if (variable === undefined) {
+            variable = getVariable(variableLit);
+            variablesMap[variableLit] = variable;
+        }
         const result = new Uint8Array(2);
         result[0] = 0x8A;
         result[1] = variable;
@@ -354,7 +373,7 @@ export const operation: IEvalOperation = {
 
         let variable = variablesMap[variableLit];
         if (variable === undefined) {
-            variable = getVariable();
+            variable = getVariable(variableLit);
             variablesMap[variableLit] = variable;
         }
 
@@ -787,7 +806,7 @@ export const operation: IEvalOperation = {
             length: inev.value.length
         };
     },
-    DataLine(optLabel, dataLit, args) {
+    DataLine(optLabel, dataLit, args, comma) {
         let label;
         if (optLabel.sourceString.length) {
             label = optLabel.eval()[0];
@@ -833,7 +852,7 @@ export const operation: IEvalOperation = {
             value: result
         };
     },
-    random(e) {
+    Random(e) {
         return {
             type: 'random',
             value: new Uint8Array([0xAB])
@@ -849,4 +868,3 @@ export const operation: IEvalOperation = {
         return this.sourceString;
     }
 };
-

@@ -175,9 +175,9 @@ export const operation: IEvalOperation = {
                 for (let j = 0; j < val.length; j++) {
                     if ((val[j] === 0x95 || val[j] === 0x96 || val[j] === 0xAF) && j < val.length - 2) {
                         const locdv = new DataView(val.buffer);
-                        const label = locdv.getUint16(j + 1, true);
+                        const jumpLabel = locdv.getUint16(j + 1, true);
                         if (label & 0x8000) {
-                            let addr = JumpTable[label - 0x8000];
+                            let addr = JumpTable[jumpLabel - 0x8000];
                             if (val[j] === 0xAF) {
                                 addr += 5;
                             }
@@ -752,7 +752,7 @@ export const operation: IEvalOperation = {
             length: inev.value.length
         };
     },
-    DataLine(optLabel, dataLit, args) {
+    DataLine(optLabel, dataLit, args, comma) {
         let label;
         if (optLabel.sourceString.length) {
             label = optLabel.eval()[0];
@@ -798,7 +798,7 @@ export const operation: IEvalOperation = {
             value: result
         };
     },
-    random(e) {
+    Random(e) {
         return {
             type: 'random',
             value: new Uint8Array([0xAB])

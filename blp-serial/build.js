@@ -6,7 +6,7 @@ const {
 } = require('child_process');
 
 const ARCH_64 = "x64";
-const TARGET = "6.1.5";
+const TARGET = "7.3.2";
 
 rimraf.sync('build');
 runNodeGyp(TARGET, ARCH_64)

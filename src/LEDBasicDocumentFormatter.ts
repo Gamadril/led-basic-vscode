@@ -145,7 +145,9 @@ export class LEDBasicDocumentFormatter implements DocumentFormattingEditProvider
             Loop(forLit, variable, eqSign, init, dirLit, end, stepLit, step) {
                 let res = forLit.sourceString + ' ' + variable.sourceString + ' ' + eqSign.sourceString + ' ' + init.sourceString + ' ' + dirLit.sourceString + ' ' + end.sourceString;
                 if (stepLit.sourceString) {
-                    res = res + stepLit.sourceString + ' ' + step.sourceString;
+                    // FIXME ohm bug? stepLit and step of type _iter and same value "step XX"
+                    // res = res + stepLit.sourceString + ' ' + step.sourceString;
+                    res = res + stepLit.sourceString;
                 }
                 goDeeper = true;
                 return res;
@@ -222,7 +224,7 @@ export class LEDBasicDocumentFormatter implements DocumentFormattingEditProvider
                 res += index.eval();
                 return res;
             },
-            DataLine(optLabel, dataLit, args) {
+            DataLine(optLabel, dataLit, args, comma) {
                 deep = 0;
                 const res = [];
                 const av = args.eval();
@@ -249,7 +251,7 @@ export class LEDBasicDocumentFormatter implements DocumentFormattingEditProvider
             Return(e) {
                 return e.sourceString;
             },
-            random(e) {
+            Random(e) {
                 return e.sourceString;
             },
             endLit(e) {
