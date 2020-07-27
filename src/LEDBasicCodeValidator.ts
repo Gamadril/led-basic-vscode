@@ -1,7 +1,7 @@
 'use strict';
 
 import { Diagnostic, DiagnosticCollection, DiagnosticSeverity, Position, Range, TextDocument, workspace } from 'vscode';
-import { IError, IRange } from './Common';
+import { IError, IRange, IMatchResult } from './Common';
 import { deviceSelector } from './DeviceSelector';
 import { LEDBasicParserFactory } from './LEDBasicParserFactory';
 
@@ -55,9 +55,30 @@ export class LEDBasicCodeValidator {
      * Validates the provided document immeditaely and returns the resul of the validation.
      * @param doc - Textdocument object of the current file
      */
-
     public validateNow(doc: TextDocument) {
         return this.processFile(doc);
+    }
+
+    /**
+     * Validates the provided document using deep code analysis
+     * @param doc - Textdocument object of the current file
+     */
+    public validateForUpload(doc: TextDocument) {
+        this.diagnosticCollection.clear();
+
+        const sourceCode = doc.getText();
+        const parser = LEDBasicParserFactory.getParser();
+        const result = parser.build(sourceCode);
+
+        if (!result.success) {
+            const errorResult = result as IMatchResult;
+            const diagnostics = errorResult.errors?.map((error: IError) => {
+                return new Diagnostic(IRange2Range(error.range), error.message, DiagnosticSeverity.Error);
+            });
+            this.diagnosticCollection.set(doc.uri, diagnostics);
+            return false;
+        }
+        return true;
     }
 
     /**

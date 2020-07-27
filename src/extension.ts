@@ -2,7 +2,7 @@
 
 import * as vscode from 'vscode';
 
-import { decodeErrorMessage, parseResultToArray } from './Common';
+import { decodeErrorMessage, IParseResult, parseResultToArray } from './Common';
 import { Device } from './Device';
 import { deviceSelector } from './DeviceSelector';
 import { LEDBasicCodeValidator } from './LEDBasicCodeValidator';
@@ -19,6 +19,7 @@ import { portSelector } from './PortSelector';
 import { SerialPort } from './SerialPort';
 import { TERM_STATE, terminal } from './Terminal';
 import { Uploader } from './Uploader';
+// import { dumpToFile } from './utils';
 
 // const LED_BASIC: vscode.DocumentFilter = { language: 'led_basic', scheme: 'file' };
 const LED_BASIC = 'led_basic'; // allow all documents, from disk and unsaved. extension code does not rely on file existence
@@ -127,7 +128,11 @@ export function activate(ctx: vscode.ExtensionContext) {
         }
         const doc = editor.document;
 
-        LEDBasicParserFactory.getParser().build(doc.getText());
+        const isValid = codeValidator.validateForUpload(doc);
+        if (!isValid) {
+            vscode.commands.executeCommand('workbench.action.problems.focus');
+            return;
+        }
 
         output.clear();
 
@@ -172,11 +177,11 @@ export function activate(ctx: vscode.ExtensionContext) {
             .then(() => output.logInfo('Starting code tokenizer...'))
             .then(() => {
                 const result = LEDBasicParserFactory.getParser().build(doc.getText());
-                if (!result) {
+                if (!result.success) {
                     vscode.commands.executeCommand('workbench.action.problems.focus');
                     throw new Error('Invalid code detected');
                 }
-                return result;
+                return result as IParseResult;
             })
             .then((result) => {
                 output.logInfo('Starting code upload...');

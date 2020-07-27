@@ -50,13 +50,13 @@ export class LEDBasicParser {
      * Generates tokenized code for the upload. Provides local configuration properties if detected in the code.
      * @param text - source code
      */
-    public build(text: string): IParseResult | null {
+    public build(text: string): IParseResult | IMatchResult {
         const check = this.match(text);
         if (!check.success) {
-            return null;
+            return check;
         }
 
-        const result: IParseResult = this.semantics(this.grammar.match(text)).eval();
+        const result: IMatchResult | IParseResult = this.semantics(this.grammar.match(text)).eval();
         return result;
     }
 }

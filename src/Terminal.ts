@@ -67,6 +67,7 @@ class Terminal {
                     }
                     this.state = TERM_STATE.CONNECTED;
                     this.update();
+                    this.port?.write(new Uint8Array([0]));
                     resolve();
                 })
                 .catch(reject);

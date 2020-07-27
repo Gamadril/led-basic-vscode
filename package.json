@@ -2,7 +2,7 @@
     "name": "led-basic",
     "displayName": "LED Basic",
     "description": "LED Basic language support for Visual Studio Code",
-    "version": "2.0.1",
+    "version": "2.0.2",
     "publisher": "Gamadril",
     "license": "MIT",
     "engines": {
