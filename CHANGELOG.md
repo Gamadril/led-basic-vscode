@@ -1,5 +1,8 @@
 # LED Basic extension changelog
 
+## 2.0.4 - 05.11.2020
+- Fix for invalid label reference
+
 ## 2.0.3 - 20.09.2020
 - rebuild serial port library
 - 
