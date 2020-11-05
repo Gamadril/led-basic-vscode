@@ -212,7 +212,7 @@ export const operation: IEvalOperation = {
                         const labelNr = locdv.getUint16(j + 1, true);
                         if (labelNr & 0x8000) {
                             let addr = JumpTable[labelNr - 0x8000];
-                            if (addr) {
+                            if (addr !== undefined) {
                                 if (val[j] === 0xAF) {
                                     addr += 5;
                                 }
