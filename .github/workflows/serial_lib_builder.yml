@@ -26,4 +26,4 @@ jobs:
       - uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: Serial LIB build for ${{ matrix.config.os }}
-          file_pattern: /blp-serial/lib/bindings/native/*.node
+          file_pattern: blp-serial/lib/bindings/native/*.node
