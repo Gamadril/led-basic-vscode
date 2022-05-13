@@ -3,12 +3,13 @@ name: SerialLib-Builder
 on:
   workflow_dispatch:
 
+defaults:
+ run:
+  working-directory: ./blp-serial
+
 jobs:
   build:
     name: Build serial port lib
-    defaults:
-      run:
-        working-directory: ./blp-serial
     runs-on: ${{ matrix.config.os }}
     strategy:
       matrix:
