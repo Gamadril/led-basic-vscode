@@ -4,16 +4,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    name: Build serial port lib
-    runs-on: ${{ matrix.config.os }}
-    strategy:
-      matrix:
-        config:
-          - os: ubuntu-latest
-          - os: macos-latest
-          - os: windows-latest
-
+  build_linux:
+    name: Build serial port lib for Linux
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
@@ -25,5 +18,41 @@ jobs:
         working-directory: ./blp-serial
       - uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: Serial LIB build for ${{ matrix.config.os }}
+          commit_message: Serial LIB build for Linux
           file_pattern: blp-serial/lib/bindings/native/*.node
+
+  build_macos:
+    name: Build serial port lib for MacOS
+    needs: build_linux
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - run: npm i
+        working-directory: ./blp-serial
+      - run: npm run build
+        working-directory: ./blp-serial
+      - uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: Serial LIB build for MacOS
+          file_pattern: blp-serial/lib/bindings/native/*.node
+
+  build_windows:
+    name: Build serial port lib for Windows
+    needs: build_macos
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - run: npm i
+        working-directory: ./blp-serial
+      - run: npm run build
+        working-directory: ./blp-serial
+      - uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: Serial LIB build for Windows
+          file_pattern: blp-serial/lib/bindings/native/*.node          
