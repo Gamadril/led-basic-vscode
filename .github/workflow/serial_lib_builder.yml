@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
 
 defaults:
- run:
-  working-directory: ./blp-serial
+  run:
+    working-directory: blp-serial
 
 jobs:
   build:
