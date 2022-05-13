@@ -3,6 +3,10 @@ name: SerialLib-Builder
 on:
   workflow_dispatch:
 
+defaults:
+  run:
+    working-directory: ./blp-serial
+
 jobs:
   build:
     name: Build serial port lib
