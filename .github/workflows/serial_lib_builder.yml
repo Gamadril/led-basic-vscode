@@ -18,6 +18,7 @@ jobs:
         working-directory: ./blp-serial
       - run: npm run build
         working-directory: ./blp-serial
+      - run: git pull        
       - uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: Serial LIB build for Linux
@@ -38,6 +39,7 @@ jobs:
         working-directory: ./blp-serial
       - run: npm run build
         working-directory: ./blp-serial
+      - run: git pull
       - uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: Serial LIB build for MacOS
@@ -58,6 +60,7 @@ jobs:
         working-directory: ./blp-serial
       - run: npm run build
         working-directory: ./blp-serial
+      - run: git pull
       - uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: Serial LIB build for Windows
