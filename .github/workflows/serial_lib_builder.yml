@@ -3,10 +3,6 @@ name: SerialLib-Builder
 on:
   workflow_dispatch:
 
-defaults:
-  run:
-    working-directory: ./blp-serial
-
 jobs:
   build:
     name: Build serial port lib
@@ -24,8 +20,10 @@ jobs:
         with:
           node-version: 16
       - run: npm i
+        working-directory: ./blp-serial
       - run: npm run build
+        working-directory: ./blp-serial
       - uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: Serial LIB build for ${{ matrix.config.os }}
-          file_pattern: lib/bindings/native/*.node
+          file_pattern: /blp-serial/lib/bindings/native/*.node
