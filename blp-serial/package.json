@@ -7,12 +7,11 @@
   "keywords": [],
   "license": "MIT",
   "scripts": {
-    "install": "node build.js"
+    "build": "node build.js"
   },
-  "dependencies": {},
   "devDependencies": {
-    "nan": "^2.14.0",
-    "node-gyp": "^6.0.1",
-    "rimraf": "^3.0.0"
+    "nan": "^2.15.0",
+    "node-gyp": "^9.0.0",
+    "rimraf": "^3.0.2"
   }
 }

@@ -1,12 +1,10 @@
+/*
 'use strict';
 
 import { SerialPort } from "./SerialPort";
 import { portSelector } from "./PortSelector";
-import { StatusBarItem, window, StatusBarAlignment, TerminalRenderer } from "vscode";
+import { StatusBarItem, window, StatusBarAlignment, Terminal } from "vscode";
 
-/**
- * Terminal state
- */
 export enum TERM_STATE {
     CONNECTED,
     DISCONNECTED,
@@ -29,11 +27,11 @@ const ERROR_MAP: { [s: string]: string; } = {
     '20': 'Wrong value in IO command'
 };
 
-class Terminal {
+class Terminals {
     private _state: TERM_STATE = TERM_STATE.DISABLED;
     private _statusBarItem: StatusBarItem;
     private _port: SerialPort | null = null;
-    private _shell: TerminalRenderer | null = null;
+    private _shell: Terminal | null = null;
 
     constructor() {
         this._statusBarItem = window.createStatusBarItem(StatusBarAlignment.Left, 2);
@@ -70,7 +68,7 @@ class Terminal {
             this._port.open()
                 .then(() => {
                     if (this._shell === null) {
-                        this._shell = window.createTerminalRenderer(TERMINAL_NAME);
+                        this._shell = window.createTerminal(TERMINAL_NAME);
                     }
 
                     this._shell.write('\x1b[32mConnected to LED Basic device: \x1b[36m' + deviceName + '\x1b[0m\r\n\r\n');
@@ -155,3 +153,4 @@ class Terminal {
 }
 
 export const terminal = new Terminal();
+*/

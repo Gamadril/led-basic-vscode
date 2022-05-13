@@ -1,5 +1,3 @@
-'use strict';
-
 import * as vscode from 'vscode';
 
 import { decodeErrorMessage, IParseResult, parseResultToArray } from './Common';
@@ -268,3 +266,5 @@ export function activate(ctx: vscode.ExtensionContext) {
         codeValidator.validate(doc);
     }, null, ctx.subscriptions);
 }
+
+export function deactivate() {}

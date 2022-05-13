@@ -6,7 +6,7 @@ const {
 } = require('child_process');
 
 const ARCH_64 = "x64";
-const TARGET = "9.2.1";
+const TARGET = "17.4.1"; // process.versions.electron
 
 rimraf.sync('build');
 runNodeGyp(TARGET, ARCH_64)
@@ -16,7 +16,7 @@ runNodeGyp(TARGET, ARCH_64)
         fs.renameSync(res.path, out_path);
         console.log('Generated', out_path);
         return Promise.resolve();
-    })
+    });
 
 function runNodeGyp(target, arch) {
     return new Promise((resolve, reject) => {
@@ -33,5 +33,5 @@ function runNodeGyp(target, arch) {
                 'arch': arch
             });
         });
-    })
+    });
 }
