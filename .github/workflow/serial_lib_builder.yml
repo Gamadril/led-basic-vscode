@@ -5,7 +5,7 @@ on:
 
 defaults:
   run:
-    working-directory: blp-serial
+    working-directory: ./blp-serial
 
 jobs:
   build:
@@ -23,6 +23,7 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 16
+      - run: pwd
       - run: npm i
       - run: npm run build
       - uses: stefanzweifel/git-auto-commit-action@v4
