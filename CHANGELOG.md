@@ -1,11 +1,17 @@
 # LED Basic extension changelog
 
+## 2.0.6 - 21.09.2022
+- rebuild serial port library 
+
+## 2.0.5 - 14.05.2022
+- rebuild serial port library 
+
 ## 2.0.4 - 05.11.2020
 - Fix for invalid label reference
 
 ## 2.0.3 - 20.09.2020
 - rebuild serial port library
-- 
+ 
 ## 2.0.2 - 27.07.2020
 - fixed code validation before upload
 - fixed missing serial debug device output

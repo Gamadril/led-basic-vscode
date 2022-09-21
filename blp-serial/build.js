@@ -6,7 +6,7 @@ const {
 } = require('child_process');
 
 const ARCH_64 = "x64";
-const TARGET = "17.4.1"; // process.versions.electron
+const TARGET = "19.0.12"; // process.versions.electron
 
 rimraf.sync('build');
 runNodeGyp(TARGET, ARCH_64)
@@ -21,7 +21,7 @@ runNodeGyp(TARGET, ARCH_64)
 function runNodeGyp(target, arch) {
     return new Promise((resolve, reject) => {
         let gyp = path.join('node_modules', '.bin', 'node-gyp');
-        exec(gyp + ' rebuild --target=' + target + ' --arch=' + arch + ' --dist-url=https://atom.io/download/electron', (err, stdout, stderr) => {
+        exec(gyp + ' rebuild --target=' + target + ' --arch=' + arch + ' --dist-url=https://electronjs.org/headers', (err, stdout, stderr) => {
             if (err) {
                 reject(err);
                 return;

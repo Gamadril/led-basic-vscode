@@ -2,7 +2,7 @@
     "name": "led-basic",
     "displayName": "LED Basic",
     "description": "LED Basic language support for Visual Studio Code",
-    "version": "2.0.5",
+    "version": "2.0.6",
     "publisher": "Gamadril",
     "license": "MIT",
     "engines": {
@@ -113,7 +113,7 @@
         "pretest": "npm run compile && npm run lint",
         "lint": "eslint src --ext ts",
         "test": "node ./out/test/runTest.js",
-        "build_compiler": "tsc -t ES2020 -outDir compiler src/LEDBasicEvalOperation.ts src/LEDBasicParser.ts src/Uploader.ts"
+        "build_compiler": "tsc -t ES2020 -outDir compiler src/LEDBasicEvalOperation.ts src/LEDBasicEvalOperationEx.ts src/LEDBasicParser.ts src/Uploader.ts"
     },
     "devDependencies": {
         "@types/glob": "^7.2.0",

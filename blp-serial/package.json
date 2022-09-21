@@ -10,7 +10,7 @@
     "build": "node build.js"
   },
   "devDependencies": {
-    "nan": "^2.15.0",
+    "nan": "^2.16.0",
     "node-gyp": "^9.0.0",
     "rimraf": "^3.0.2"
   }
